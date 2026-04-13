@@ -36,7 +36,6 @@ export const I18N = {
   flipH: "Specchia H",
   flipV: "Specchia V",
   close: "Chiudi",
-  openProjectPage: "Pagina progetto",
   loadingImages: "Caricamento immagini…",
   prevImage: "Immagine precedente",
   nextImage: "Immagine successiva",

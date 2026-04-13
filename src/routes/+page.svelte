@@ -1,7 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { open, save, message } from "@tauri-apps/plugin-dialog";
-  import { openUrl } from "@tauri-apps/plugin-opener";
   import { onMount } from "svelte";
   import * as app from "$lib/app.svelte";
   import type { FilterTab, Slide } from "$lib/types";
@@ -159,8 +158,6 @@
     onAssignSpecies={openSpeciesBulk}
     onDelete={() => (confirmDeleteOpen = true)}
     onClearSelection={() => app.clearSelection()}
-    onOpenProject={() =>
-      openUrl("https://github.com/maxdrift/safari-client").catch(console.error)}
   />
 
   <TabBar tab={app.ui.filterTab} onChange={setFilter} counts={cnt} />

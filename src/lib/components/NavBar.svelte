@@ -13,7 +13,6 @@
     onAssignSpecies: () => void;
     onDelete: () => void;
     onClearSelection: () => void;
-    onOpenProject: () => void;
   }
   let {
     selectionCount,
@@ -25,7 +24,6 @@
     onAssignSpecies,
     onDelete,
     onClearSelection,
-    onOpenProject,
   }: Props = $props();
 
   const selectionMode = $derived(selectionCount > 0);
@@ -96,11 +94,6 @@
       class="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-600 dark:hover:bg-zinc-800"
       disabled={!hasSlides}
       onclick={onExport}>{I18N.exportCsv}</button
-    >
-    <button
-      type="button"
-      class="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-      onclick={onOpenProject}>{I18N.openProjectPage}</button
     >
   {/if}
 </header>
