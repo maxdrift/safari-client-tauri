@@ -54,10 +54,17 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # macOS: sign the app and DMG via APPLE_* (see https://v1.tauri.app/v1/guides/distribution/sign-macos).
+      # Do not set APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID (or API key trio) here — that skips notarization.
+      # Notarization needs a paid Apple Developer Program membership; signing alone does not require it.
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: Safari Client v__VERSION__
