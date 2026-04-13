@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Class-based dark mode (see `applyDocumentTheme` in theme.svelte.ts) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body {
+  @apply h-full overflow-hidden antialiased;
+}
+
+html {
+  @apply bg-zinc-50 text-zinc-900;
+}
+
+html.dark {
+  @apply bg-zinc-950 text-zinc-100;
+}
+
+/* Prevent browser opening files dropped on the window (PRD §10.4) */
+body {
+  overscroll-behavior: none;
+}
