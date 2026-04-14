@@ -35,8 +35,12 @@
 
   function safeCsvBasename(name: string): string {
     const t = name.trim() || "concorrente";
-    return t
-      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
+    const noCtrl = Array.from(t, (ch) => {
+      const cp = ch.codePointAt(0)!;
+      return cp <= 0x1f ? "_" : ch;
+    }).join("");
+    return noCtrl
+      .replace(/[<>:"/\\|?*]/g, "_")
       .replace(/\s+/g, "_")
       .slice(0, 80);
   }
