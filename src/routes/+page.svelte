@@ -56,8 +56,12 @@
     lightboxSlide ? app.selectedIds.includes(lightboxSlide.id) : false,
   );
 
-  onMount(() => {
-    void app.initApp();
+  onMount(async () => {
+    try {
+      await app.initApp();
+    } catch (e) {
+      console.error(e);
+    }
   });
 
   $effect(() => {
@@ -185,21 +189,23 @@
       {#if app.slides.length === 0}
         <EmptyState onLoad={pickImages} />
       {:else}
-        <SlideGrid
-          minCellPx={gridMinCellPx}
-          {visible}
-          {reorderEnabled}
-          selectedIds={app.selectedIds}
-          speciesLabelFor={(id) => app.speciesCommonName(id)}
-          onToggleSelect={(id) => app.toggleSelected(id)}
-          onCycleCategory={(id) => app.cycleCategoryForSlide(id)}
-          onOpenSpecies={openSpeciesFor}
-          onOpenLightbox={(id) => {
-            const s = app.slides.find((x) => x.id === id) ?? null;
-            lightboxSlide = s;
-          }}
-          onReorder={onReorder}
-        />
+        {#key app.gridLayoutEpoch.n}
+          <SlideGrid
+            minCellPx={gridMinCellPx}
+            {visible}
+            {reorderEnabled}
+            selectedIds={app.selectedIds}
+            speciesLabelFor={(id) => app.speciesCommonName(id)}
+            onToggleSelect={(id) => app.toggleSelected(id)}
+            onCycleCategory={(id) => app.cycleCategoryForSlide(id)}
+            onOpenSpecies={openSpeciesFor}
+            onOpenLightbox={(id) => {
+              const s = app.slides.find((x) => x.id === id) ?? null;
+              lightboxSlide = s;
+            }}
+            onReorder={onReorder}
+          />
+        {/key}
       {/if}
     </div>
     <SpeciesOverview species={app.speciesList} {usage} />

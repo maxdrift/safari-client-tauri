@@ -1,3 +1,4 @@
+import { tick } from "svelte";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Category,
@@ -11,8 +12,15 @@ import type {
 import { applyDocumentTheme, THEME_STORAGE_KEY } from "$lib/theme";
 
 export const slides = $state<Slide[]>([]);
-/** Incremented on slide list / thumbnail updates so UI `$derived.by` invalidates across module boundaries. */
+/** Incremented on slide list / thumbnail updates so UI `$derived.by` invalidates across module boundaries. Use `.n` mutation only (Svelte forbids reassigning exported `$state` primitives). */
 export const slidesRenderEpoch = $state({ n: 0 });
+
+/** Bumped to force-remount `SlideGrid` (see `{#key}` in `+page.svelte`) after bulk import — works around dndzone/Svelte leaving tiles stale until a tab switch. */
+export const gridLayoutEpoch = $state({ n: 0 });
+
+function bumpGridLayoutEpoch(): void {
+  gridLayoutEpoch.n++;
+}
 
 export const ui = $state<{ filterTab: FilterTab; theme: ThemePreference }>({
   filterTab: "all",
@@ -107,6 +115,11 @@ export async function initApp(): Promise<void> {
     console.error(e);
   }
   void drainThumbnailQueue();
+  if (slides.length > 0) {
+    void tick().then(() => {
+      requestAnimationFrame(() => bumpGridLayoutEpoch());
+    });
+  }
 }
 
 export function mergeIncoming(existing: Slide[], incoming: Slide[]): Slide[] {
@@ -163,6 +176,7 @@ export function drainThumbnailQueue(): Promise<void> {
               };
               slides.splice(idx, 1, next);
               bumpSlidesRenderEpoch();
+              await tick();
             } catch (e) {
               console.error(e);
             }
@@ -172,6 +186,12 @@ export function drainThumbnailQueue(): Promise<void> {
       }
     } finally {
       drainPromise = null;
+      // If new pending slides appeared while this drain was finishing, run again (covers races with init/load).
+      if (slides.some((s) => s.thumbnailsPending)) {
+        queueMicrotask(() => {
+          void drainThumbnailQueue();
+        });
+      }
     }
   })();
   return drainPromise;
@@ -195,6 +215,7 @@ export async function addImagesFromPaths(
     slides.length = 0;
     slides.push(...current);
     bumpSlidesRenderEpoch();
+    await tick();
     done += batch.length;
     onProgress?.(done, total);
     await yieldToMain();
@@ -202,6 +223,11 @@ export async function addImagesFromPaths(
 
   scheduleSave();
   void drainThumbnailQueue();
+  await tick();
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+  bumpGridLayoutEpoch();
 }
 
 export function speciesCommonName(subjectId: number): string {
@@ -308,6 +334,7 @@ export async function applyTransform(slide: Slide, action: string): Promise<void
     thumbnailsPending: false,
   });
   bumpSlidesRenderEpoch();
+  await tick();
   scheduleSave();
 }
 

@@ -45,12 +45,14 @@ This file was originally a **forward-looking** plan. It is now **aligned with th
 2. **State layout:** There is **no** `src/lib/stores/{slides,selection,filter,species}.svelte.ts` split. State lives mainly in **`src/lib/app.svelte.ts`** (`slides`, `selectedIds`, `ui`, `speciesList`, etc.) plus small helpers (`theme.ts`, `i18n.ts`).
 3. **SvelteKit:** The app uses **`src/routes/+layout.svelte`**, **`src/routes/+page.svelte`**, not a root `App.svelte` as the only entry (adapter-static).
 4. **Command names:** Tauri commands are suffixed **`_cmd`** in Rust and invoked as e.g. `invoke("load_slides_from_paths_cmd", …)`. There is no `load_images` / `check_previews` as originally sketched—see **§Rust commands (actual)**.
-5. **Thumbnails:** New slides are registered with **`image::image_dimensions`** (fast); preview files are written **asynchronously** from the frontend via **`regenerate_thumbnails_cmd`** and **`drainThumbnailQueue()`**. Do not block the UI generating all thumbs inside `load_slides_from_paths`.
-6. **Svelte 5 cross-module reactivity:** Mutating `slides[i]` from `app.svelte.ts` may **not** invalidate `$derived(app.visibleSlides())` in `+page.svelte`. The codebase uses **`slidesRenderEpoch.n`** (`$state({ n: 0 })`) bumped after thumbnail completion and other mutations, and **`$derived.by(() => { void app.slidesRenderEpoch.n; … })`** for `visible`, `counts`, `speciesUsage`. **Replacing slide objects with `slides.splice` + bumping epoch** is required for grid thumbnail refresh.
-7. **`thumbnailsPending`:** Serialized as camelCase from Rust. **`normalizeSlide()`** treats missing/`undefined` as pending; also accepts **`thumbnails_pending`** if ever present. **`thumbReady === (slide.thumbnailsPending === false)`** in tiles.
-8. **Playwright:** Not in `package.json`. Phase-8 “optional Playwright” was **not** implemented; CI runs Vitest + Rust tests only.
-9. **Config filenames:** **`vite.config.js`** (not `.ts`). **`Makefile`** exists at repo root for common tasks (`make help`).
-10. **README / docs:** User-facing copy is **Italian** (PRD); **README** is **English** by project convention.
+5. **Thumbnails (Rust cache vs grid display):** New slides are registered with **`image::image_dimensions`** (fast); preview files (350/512/1024) are written **asynchronously** via **`regenerate_thumbnails_cmd`** and **`drainThumbnailQueue()`** — still required for export/lightbox-adjacent use of cached sizes. **Do not** rely on temp-cache paths for **grid tile `<img>` src**: **`SlideTile`** uses **`convertFileSrc(slide.path)`** (original file), matching **Lightbox**, because WKWebView/`asset://` was unreliable for paths under the system temp preview dir. The tile shows a spinner until **`load`**/`error` on that img, not until `thumbnailsPending` flips.
+6. **Svelte 5 cross-module reactivity:** Mutating `slides[i]` from `app.svelte.ts` may **not** invalidate `$derived` in `+page.svelte`. The codebase uses **`slidesRenderEpoch.n`** bumped after mutations, and **`$derived.by(() => { void app.slidesRenderEpoch.n; … })`** for `visible`, `counts`, `speciesUsage`. **Replacing slide objects with `slides.splice` + bumping epoch** is required when updating slide records.
+7. **`thumbnailsPending`:** Still serialized from Rust for cache bookkeeping. **`normalizeSlide()`** treats missing/`undefined` as pending. Grid **display** does not gate on it (see §5); pending is for background **`drainThumbnailQueue`** completion.
+8. **Bulk import + `svelte-dnd-action`:** After **`addImagesFromPaths`** finishes (and on **`initApp`** when slides restore), bump **`gridLayoutEpoch.n`** after **`tick()`** + one **`requestAnimationFrame`**, and wrap **`<SlideGrid>`** in **`{#key app.gridLayoutEpoch.n}`** in **`+page.svelte`**. Without this, only the last tile (or none) could show images until a **tab filter change** forced a full remount. Do not remove this “forced refresh” without retesting many-file import on macOS.
+9. **Playwright:** Not in `package.json`. Phase-8 “optional Playwright” was **not** implemented; CI runs Vitest + Rust tests only.
+10. **Vitest thumbnail tests:** **`src/lib/thumbnails.test.ts`** covers **`drainThumbnailQueue`** (mocked `invoke`) and **`SlideTile`** (path-based src + `load` event). **`vite.config.js`** sets **`resolve.conditions`** for Vitest so Svelte’s **client** build is used with `@testing-library/svelte` (see comment in config).
+11. **Config filenames:** **`vite.config.js`** (not `.ts`). **`Makefile`** exists at repo root for common tasks (`make help`).
+12. **README / docs:** User-facing copy is **Italian** (PRD); **README** is **English** by project convention.
 
 ---
 
@@ -93,7 +95,7 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 
 ## Frontend state (actual)
 
-- **`src/lib/app.svelte.ts`:** `slides`, `slidesRenderEpoch`, `ui` (`filterTab`, `theme`), `speciesList`, `selectedIds`; helpers `initApp`, `addImagesFromPaths`, `drainThumbnailQueue`, transforms, filters, `normalizeSlide`, etc.
+- **`src/lib/app.svelte.ts`:** `slides`, `slidesRenderEpoch`, **`gridLayoutEpoch`** (forces `SlideGrid` remount via `{#key}` in `+page.svelte`), `ui` (`filterTab`, `theme`), `speciesList`, `selectedIds`; helpers `initApp`, `addImagesFromPaths`, `drainThumbnailQueue`, transforms, filters, `normalizeSlide`, etc.
 - **Selection** is `selectedIds: string[]` (ids = basenames), not a `Set` in a separate file.
 - **Species modal** builds synthetic “remove species” row in **`SpeciesModal.svelte`**, not a separate store file.
 
@@ -109,7 +111,17 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 
 1. **`load_slides_from_paths`** → `slide_dto_lazy_from_path`: `image::image_dimensions` + expected thumb paths, **`thumbnails_pending: true`**.
 2. **`ensure_previews_for_persisted`:** If all three cache files exist → `thumbnails_pending: false`; else pending true; **no** synchronous full decode for restore.
-3. **Frontend `drainThumbnailQueue`:** Batches `regenerate_thumbnails_cmd`, then **`slides.splice(idx, 1, nextSlide)`** + **`bumpSlidesRenderEpoch()`**.
+3. **Frontend `drainThumbnailQueue`:** Batches `regenerate_thumbnails_cmd`, then **`slides.splice(idx, 1, nextSlide)`** + **`bumpSlidesRenderEpoch()`** (+ optional **`tick()`** after each completion).
+
+### Grid thumbnails + bulk import (what to preserve)
+
+| Topic | Implementation |
+|-------|------------------|
+| **Tile image src** | **`convertFileSrc(slide.path)`** in **`SlideTile.svelte`** — not `thumbnails.s350`. Aligns with Lightbox; avoids temp-dir `asset://` issues in WKWebView. |
+| **Spinner** | Shown until `<img>` **`onload`/`onerror`**, local **`imgDecoded`** state; reset when `slide.id` / `transformId` changes (`$effect`). |
+| **After many imports** | End of **`addImagesFromPaths`**: **`await tick()`**, **`requestAnimationFrame`**, then **`gridLayoutEpoch.n++`**. **`initApp`**: same bump when **`slides.length > 0`** (restored session). |
+| **Remount** | **`+page.svelte`**: `{#key app.gridLayoutEpoch.n} … </SlideGrid>`. Mimics “switch tab away and back” without user action. |
+| **Why** | **`svelte-dnd-action`** + incremental `items` updates could leave most tiles stale; only a full zone remount reliably refreshed all **`SlideTile`** instances. |
 
 ---
 
@@ -148,7 +160,7 @@ There is **no** `vite.config.ts` — use **`vite.config.js`**.
 | Layer | What runs |
 |-------|-----------|
 | Rust | `cargo test`, `cargo clippy -- -D warnings` in `src-tauri/` (CI + Makefile) |
-| TS | `src/lib/utils/transform.test.ts` via **Vitest** (`npm test`) |
+| TS | **`transform.test.ts`**, **`thumbnails.test.ts`** via **Vitest** (`npm test`) |
 | E2E | **Not** wired (no Playwright in repo) |
 
 ---
@@ -157,7 +169,7 @@ There is **no** `vite.config.ts` — use **`vite.config.js`**.
 
 **`ci.yml`:** `ubuntu-22.04`, `macos-latest`, `windows-latest`. **npm** (`npm ci`, cache `package-lock.json`). Steps: `npm run check`, `lint`, `npm test`, `cargo clippy`, `cargo test`, `npm run tauri build -- --debug`.
 
-**`release.yml`:** Tag `v*`. Matrix includes **two macOS targets** (`aarch64-apple-darwin`, `x86_64-apple-darwin`), Linux, Windows. Uses **`tauri-apps/tauri-action@v0`** with `args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}`. Draft release.
+**`release.yml`:** Tag `v*`. Matrix includes **two macOS targets** (`aarch64-apple-darwin`, `x86_64-apple-darwin`), Linux, Windows. Uses **`tauri-apps/tauri-action@v0`** with `args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}`. Draft release. **macOS signing (optional):** workflow accepts **`APPLE_SIGNING_IDENTITY`**, **`APPLE_CERTIFICATE`** (base64 `.p12`), **`APPLE_CERTIFICATE_PASSWORD`**; **`CI: true`** is set so the action can sign. **Notarization** is **not** wired—no paid-Apple-account assumptions.
 
 **Do not** document pnpm in CI—it is not used.
 
@@ -217,8 +229,9 @@ Unchanged in principle: **`transform_id`** 0–7, shared logic in Rust (`imaging
 
 | Risk | As-built mitigation |
 |------|---------------------|
-| Large imports blocking UI | Lazy metadata + `drainThumbnailQueue` + progress overlay + `requestAnimationFrame` yields |
-| Svelte not updating thumbs | **`slidesRenderEpoch`** + `splice` + `$derived.by` |
+| Large imports blocking UI | Lazy metadata + `drainThumbnailQueue` + progress overlay + `requestAnimationFrame` yields between batches |
+| Grid tiles stuck on spinner / only last tile shows image | **Grid uses `slide.path` for `<img>`**, not temp preview URLs; after import **`gridLayoutEpoch`** + **`{#key}`** on **`SlideGrid`**; **`slidesRenderEpoch`** + `splice` for state consistency |
+| WKWebView + temp preview paths | **Do not** use `thumbnails.s350` for grid display; keep Rust cache for other features |
 | Wrong package manager in automation | Use **npm** everywhere unless repo migrates |
 | macOS two-arch releases | Release matrix builds **arm64 + x86_64** separately—not a universal binary unless you add `universal-apple-darwin` |
 | Tauri asset scope | `assetProtocol.scope` in `tauri.conf.json` for `convertFileSrc` |
@@ -227,4 +240,4 @@ Unchanged in principle: **`transform_id`** 0–7, shared logic in Rust (`imaging
 
 ## Code signing
 
-Optional; same as before—secrets for Apple/Windows if distributing outside trusted circles. Unchanged by implementation.
+Optional. **macOS:** GitHub Actions secrets above for ad-hoc or Developer ID signing on release builds; **notarization** is out of scope unless you add Apple API key + `notarytool` steps. **Windows:** unchanged (no signing secrets documented in-repo by default).

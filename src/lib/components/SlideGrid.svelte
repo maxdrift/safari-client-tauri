@@ -43,7 +43,8 @@
 
   function handleFinalize(e: CustomEvent<{ items: DndItem[] }>) {
     items = e.detail.items;
-    onReorder(e.detail.items.map((i) => i.slide));
+    const m = new Map(visible.map((s) => [s.id, s]));
+    onReorder(e.detail.items.map((i) => m.get(i.id) ?? i.slide));
   }
 </script>
 
@@ -61,8 +62,8 @@
 >
   {#each items as item (item.id)}
     <SlideTile
-      slide={item.slide}
-      speciesLabel={speciesLabelFor(item.slide.subjectId)}
+      slideId={item.id}
+      {speciesLabelFor}
       selected={selectedIds.includes(item.id)}
       {reorderEnabled}
       onToggleSelect={() => onToggleSelect(item.id)}

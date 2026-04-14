@@ -4,10 +4,20 @@ import { sveltekit } from "@sveltejs/kit/vite";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+// @ts-expect-error process is a nodejs global
+const isVitest = Boolean(process.env.VITEST);
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [tailwindcss(), sveltekit()],
+  // Vitest must resolve the client Svelte build so `render()` can mount components (not SSR).
+  ...(isVitest
+    ? {
+        resolve: {
+          conditions: ["browser", "development"],
+        },
+      }
+    : {}),
   test: {
     environment: "jsdom",
     include: ["src/**/*.{test,spec}.{js,ts}"],
