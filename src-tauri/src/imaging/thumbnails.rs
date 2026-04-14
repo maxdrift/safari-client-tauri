@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 use image::imageops::FilterType;
 use image::DynamicImage;
+
+use super::exif::{apply_exif_orientation, dimensions_after_exif, read_exif_orientation};
 use crate::imaging::transform::apply_transform_id;
 use crate::models::Category;
 use crate::models::{SlideDto, ThumbnailPaths};
@@ -54,6 +56,8 @@ pub fn generate_thumbnails_for_slide(
     let paths = thumb_paths_for_basename(&basename, ext);
 
     let img = image::open(original_path)?;
+    let exif_o = read_exif_orientation(original_path);
+    let img = apply_exif_orientation(img, exif_o);
     let oriented = apply_transform_id(img, transform_id);
 
     for &w in &WIDTHS {
@@ -84,7 +88,9 @@ pub fn slide_dto_lazy_from_path(
     subject_id: u32,
     transform_id: u8,
 ) -> anyhow::Result<SlideDto> {
+    let exif_o = read_exif_orientation(path);
     let (w, h) = image::image_dimensions(path)?;
+    let (w, h) = dimensions_after_exif(w, h, exif_o);
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -104,5 +110,6 @@ pub fn slide_dto_lazy_from_path(
         transform_id,
         thumbnails,
         thumbnails_pending: true,
+        exif_orientation: exif_o,
     })
 }

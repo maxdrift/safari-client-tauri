@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::imaging::{
-    compose_user_action, generate_thumbnails_for_slide, remove_thumbnails_for_basename,
-    slide_dto_lazy_from_path, thumb_paths_for_basename, UserAction,
+    compose_user_action, dimensions_after_exif, generate_thumbnails_for_slide,
+    read_exif_orientation, remove_thumbnails_for_basename, slide_dto_lazy_from_path,
+    thumb_paths_for_basename, UserAction,
 };
 use crate::models::Category;
 use crate::models::{PersistedSlide, SlideDto};
@@ -59,7 +60,12 @@ pub fn ensure_previews_for_persisted(slides: Vec<PersistedSlide>) -> Result<Vec<
         let thumbnails_pending = !Path::new(&thumbnails.s350).exists()
             || !Path::new(&thumbnails.s512).exists()
             || !Path::new(&thumbnails.s1024).exists();
-        let (width, height) = image::image_dimensions(&path).map_err(|e| e.to_string())?;
+        let exif_o = ps
+            .exif_orientation
+            .filter(|&o| (1..=8).contains(&o))
+            .unwrap_or_else(|| read_exif_orientation(&path));
+        let (w, h) = image::image_dimensions(&path).map_err(|e| e.to_string())?;
+        let (width, height) = dimensions_after_exif(w, h, exif_o);
         out.push(SlideDto {
             id: ps.id,
             path: ps.path,
@@ -70,6 +76,7 @@ pub fn ensure_previews_for_persisted(slides: Vec<PersistedSlide>) -> Result<Vec<
             transform_id: ps.transform_id,
             thumbnails,
             thumbnails_pending,
+            exif_orientation: exif_o,
         });
     }
     Ok(out)

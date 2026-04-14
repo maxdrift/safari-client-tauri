@@ -2,6 +2,7 @@ mod commands;
 mod imaging;
 mod models;
 
+use commands::csv_import;
 use commands::export;
 use commands::images;
 use commands::persistence;
@@ -54,6 +55,11 @@ fn export_csv_cmd(slides: Vec<SlideDto>, path: String) -> Result<(), String> {
     export::export_csv(&slides, std::path::Path::new(&path))
 }
 
+#[tauri::command]
+fn import_csv_cmd(slides: Vec<SlideDto>, path: String) -> Result<csv_import::CsvImportOutcome, String> {
+    csv_import::merge_csv_into_slides(std::path::Path::new(&path), slides)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -68,6 +74,7 @@ pub fn run() {
             remove_slide_cache_cmd,
             apply_transform_action_cmd,
             export_csv_cmd,
+            import_csv_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

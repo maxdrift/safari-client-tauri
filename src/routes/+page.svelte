@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import * as app from "$lib/app.svelte";
   import type { FilterTab, Slide } from "$lib/types";
+  import CompetitorExportDialog from "$lib/components/CompetitorExportDialog.svelte";
   import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import LoadProgressOverlay from "$lib/components/LoadProgressOverlay.svelte";
@@ -19,6 +20,26 @@
   let speciesTargets = $state<string[]>([]);
   let lightboxSlide = $state<Slide | null>(null);
   let confirmDeleteOpen = $state(false);
+  let competitorExportOpen = $state(false);
+  let competitorNamePrefill = $state("");
+
+  const COMPETITOR_STORAGE_KEY = "safari-client-export-competitor-name";
+
+  function readCachedCompetitor(): string {
+    try {
+      return localStorage.getItem(COMPETITOR_STORAGE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  function safeCsvBasename(name: string): string {
+    const t = name.trim() || "concorrente";
+    return t
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
+      .replace(/\s+/g, "_")
+      .slice(0, 80);
+  }
   let loadProgress = $state<{ active: boolean; done: number; total: number }>({
     active: false,
     done: 0,
@@ -94,9 +115,21 @@
     }
   }
 
-  async function exportCsv() {
+  function openExportDialog() {
+    competitorNamePrefill = readCachedCompetitor();
+    competitorExportOpen = true;
+  }
+
+  async function onCompetitorExportConfirm(name: string) {
+    try {
+      localStorage.setItem(COMPETITOR_STORAGE_KEY, name.trim());
+    } catch {
+      /* ignore */
+    }
+    competitorExportOpen = false;
+    const base = safeCsvBasename(name);
     const path = await save({
-      defaultPath: "scheda_concorrente.csv",
+      defaultPath: `scheda_${base}.csv`,
       filters: [{ name: "CSV", extensions: ["csv"] }],
     });
     if (path === null) return;
@@ -106,6 +139,31 @@
     } catch (e) {
       await message(String(e), {
         title: I18N.exportErrorTitle,
+        kind: "error",
+      });
+    }
+  }
+
+  async function importCsv() {
+    const path = await open({
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+    });
+    if (path === null) return;
+    const p = typeof path === "string" ? path : path[0];
+    if (!p) return;
+    try {
+      const result = await invoke<{ slides: Slide[]; matched: number }>("import_csv_cmd", {
+        slides: app.slides,
+        path: p,
+      });
+      await app.applySlidesFromCsvImport(result.slides);
+      await message(
+        result.matched === 0 ? I18N.importCsvNone : I18N.importCsvSuccess(result.matched),
+        { title: I18N.appTitle },
+      );
+    } catch (e) {
+      await message(String(e), {
+        title: I18N.importCsvErrorTitle,
         kind: "error",
       });
     }
@@ -155,7 +213,8 @@
   <NavBar
     {selectionCount}
     hasSlides={app.slides.length > 0}
-    onExport={exportCsv}
+    onImportCsv={importCsv}
+    onExport={openExportDialog}
     onDeselectAll={() => app.deselectAllInFilter(visible.map((s) => s.id))}
     onSelectAll={() => app.selectAllVisible(visible.map((s) => s.id))}
     onSetCategory={(c) => app.setCategoryForSelected(c, visible.map((s) => s.id))}
@@ -245,6 +304,13 @@
   done={loadProgress.done}
   total={loadProgress.total}
   label={I18N.loadingImages}
+/>
+
+<CompetitorExportDialog
+  open={competitorExportOpen}
+  initialName={competitorNamePrefill}
+  onCancel={() => (competitorExportOpen = false)}
+  onConfirm={onCompetitorExportConfirm}
 />
 
 <ConfirmDialog

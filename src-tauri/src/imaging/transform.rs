@@ -89,6 +89,26 @@ fn test_pattern() -> DynamicImage {
     DynamicImage::ImageRgba8(img)
 }
 
+/// Compose pixel transforms: result is `outer ∘ inner` (apply `inner` first, then `outer`).
+/// Matches `apply_transform_id(apply_transform_id(img, inner), outer)`.
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn compose_transform_ids(outer: u8, inner: u8) -> u8 {
+    let orig = test_pattern();
+    let mid = apply_transform_id(orig, inner);
+    let out = apply_transform_id(mid, outer);
+    classify(&out)
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn classify_image(img: &DynamicImage) -> u8 {
+    classify(img)
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn test_pattern_image() -> DynamicImage {
+    test_pattern()
+}
+
 fn classify(img: &DynamicImage) -> u8 {
     for id in 0u8..8 {
         let orig = test_pattern();

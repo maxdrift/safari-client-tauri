@@ -6,6 +6,7 @@
   interface Props {
     selectionCount: number;
     hasSlides: boolean;
+    onImportCsv: () => void;
     onExport: () => void;
     onDeselectAll: () => void;
     onSelectAll: () => void;
@@ -17,6 +18,7 @@
   let {
     selectionCount,
     hasSlides,
+    onImportCsv,
     onExport,
     onDeselectAll,
     onSelectAll,
@@ -89,6 +91,12 @@
       <option value="dark">{I18N.themeDark}</option>
       <option value="system">{I18N.themeSystem}</option>
     </select>
+    <button
+      type="button"
+      class="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-600 dark:hover:bg-zinc-800"
+      disabled={!hasSlides}
+      onclick={onImportCsv}>{I18N.importCsv}</button
+    >
     <button
       type="button"
       class="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-600 dark:hover:bg-zinc-800"

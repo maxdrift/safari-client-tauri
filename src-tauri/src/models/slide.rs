@@ -36,6 +36,10 @@ pub struct ThumbnailPaths {
     pub s1024: String,
 }
 
+fn default_exif_orientation() -> u8 {
+    1
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SlideDto {
@@ -50,6 +54,9 @@ pub struct SlideDto {
     /// True until preview files exist; frontend generates them in the background.
     #[serde(default)]
     pub thumbnails_pending: bool,
+    /// EXIF orientation tag 1–8 (`1` = normal). Used with `transform_id` for display and thumbnails.
+    #[serde(default = "default_exif_orientation")]
+    pub exif_orientation: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +67,8 @@ pub struct PersistedSlide {
     pub category: Category,
     pub subject_id: u32,
     pub transform_id: u8,
+    #[serde(default)]
+    pub exif_orientation: Option<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

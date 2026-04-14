@@ -51,6 +51,7 @@ describe("drainThumbnailQueue", () => {
       category: "excluded",
       subjectId: 0,
       transformId: 0,
+      exifOrientation: 1,
       thumbnails: { s350: "", s512: "", s1024: "" },
       thumbnailsPending: true,
     });
@@ -77,6 +78,7 @@ describe("drainThumbnailQueue", () => {
         category: "excluded",
         subjectId: 0,
         transformId: 0,
+        exifOrientation: 1,
         thumbnails: { s350: "", s512: "", s1024: "" },
         thumbnailsPending: true,
       });
@@ -105,6 +107,7 @@ describe("SlideTile (grid uses original path)", () => {
       category: "excluded",
       subjectId: 0,
       transformId: 0,
+      exifOrientation: 1,
       thumbnails: { s350: "/thumbs/350.jpg", s512: "", s1024: "" },
       thumbnailsPending: true,
     });
@@ -155,6 +158,7 @@ describe("SlideTile (grid uses original path)", () => {
       category: "excluded",
       subjectId: 0,
       transformId: 0,
+      exifOrientation: 1,
       thumbnails: { s350: "", s512: "", s1024: "" },
       thumbnailsPending: true,
     });

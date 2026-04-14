@@ -10,6 +10,15 @@ export const I18N = {
   appTitle: "Safari Client",
   loadImages: "Carica immagini",
   exportCsv: "Esporta CSV",
+  importCsv: "Importa CSV",
+  competitorExportTitle: "Nome concorrente",
+  competitorExportHint:
+    "Il nome viene usato nel nome file (es. scheda_Mario_Rossi.csv). Puoi modificarlo a ogni esportazione.",
+  competitorNamePlaceholder: "Nome e cognome",
+  importCsvSuccess: (n: number) =>
+    n === 1 ? "Aggiornata 1 slide dal CSV." : `Aggiornate ${n} slide dal CSV.`,
+  importCsvNone: "Nessuna slide corrisponde ai nomi file nel CSV.",
+  importCsvErrorTitle: "Importazione CSV non riuscita",
   emptyHint: "Carica le foto per iniziare.",
   all: "Tutte",
   excluded: "Scartate",

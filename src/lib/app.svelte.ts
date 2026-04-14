@@ -63,13 +63,21 @@ export const selectedIds = $state<string[]>([]);
 
 const CATEGORY_ORDER: Category[] = ["excluded", "fixed", "jury"];
 
+function normalizeExif(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(8, Math.max(1, Math.round(n)));
+}
+
 /** Tauri may omit `thumbnailsPending`; treat missing as pending so the grid shows a loader until previews exist. */
 function normalizeSlide(s: Slide): Slide {
-  const snake = (s as Slide & { thumbnails_pending?: boolean }).thumbnails_pending;
-  const pending = s.thumbnailsPending ?? snake;
+  const ext = s as Slide & { thumbnails_pending?: boolean; exif_orientation?: number };
+  const pending = s.thumbnailsPending ?? ext.thumbnails_pending;
+  const exifSrc = s.exifOrientation ?? ext.exif_orientation;
   return {
     ...s,
     thumbnailsPending: pending !== false,
+    exifOrientation: normalizeExif(exifSrc ?? 1),
   };
 }
 
@@ -84,6 +92,7 @@ function toPersisted(s: Slide): PersistedSlide {
     category: s.category,
     subjectId: s.subjectId,
     transformId: s.transformId,
+    exifOrientation: s.exifOrientation,
   };
 }
 
@@ -314,6 +323,18 @@ export function reorderSlides(newOrder: Slide[]): void {
   slides.push(...newOrder);
   bumpSlidesRenderEpoch();
   scheduleSave();
+}
+
+/** Replace slides after CSV import; regenerates previews for updated rows. */
+export async function applySlidesFromCsvImport(next: Slide[]): Promise<void> {
+  slides.length = 0;
+  slides.push(...next.map(normalizeSlide));
+  bumpSlidesRenderEpoch();
+  scheduleSave();
+  await tick();
+  await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  bumpGridLayoutEpoch();
+  void drainThumbnailQueue();
 }
 
 export async function applyTransform(slide: Slide, action: string): Promise<void> {

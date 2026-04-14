@@ -57,7 +57,7 @@ pub fn export_csv(slides: &[SlideDto], dest: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn stem_filename(filename: &str) -> String {
+pub(crate) fn stem_filename(filename: &str) -> String {
     Path::new(filename)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -98,6 +98,7 @@ mod tests {
                 s1024: "".into(),
             },
             thumbnails_pending: false,
+            exif_orientation: 1,
         }
     }
 

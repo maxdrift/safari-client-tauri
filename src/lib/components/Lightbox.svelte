@@ -2,7 +2,7 @@
   import { convertFileSrc } from "@tauri-apps/api/core";
   import { nonPassiveWheel } from "$lib/actions/nonPassiveWheel";
   import type { Slide, Species } from "$lib/types";
-  import { transformIdToCss } from "$lib/utils/transform";
+  import { displayTransformId, transformIdToCss } from "$lib/utils/transform";
   import { categoryLabel, I18N } from "$lib/utils/i18n";
 
   interface Props {
@@ -27,7 +27,11 @@
   let dialogEl = $state<HTMLDivElement | null>(null);
 
   const origUrl = $derived(slide ? convertFileSrc(slide.path) : "");
-  const tf = $derived(slide ? transformIdToCss(slide.transformId) : "none");
+  const tf = $derived(
+    slide
+      ? transformIdToCss(displayTransformId(slide.transformId, slide.exifOrientation))
+      : "none",
+  );
 
   const navIdx = $derived(
     slide ? slides.findIndex((s) => s.id === slide.id) : -1,
@@ -255,7 +259,7 @@
               <img
                 src={origUrl}
                 alt={slide.id}
-                class="max-h-[calc(100vh-220px)] max-w-[calc(100vw-32px)] object-contain md:max-h-[calc(100vh-200px)]"
+                class="max-h-[calc(100vh-220px)] max-w-[calc(100vw-32px)] object-contain [image-orientation:none] md:max-h-[calc(100vh-200px)]"
                 style:transform={tf}
                 style:transform-origin="center center"
                 draggable="false"
@@ -266,7 +270,7 @@
                 alt={slide.id}
                 width={slide.width}
                 height={slide.height}
-                class="max-w-none"
+                class="max-w-none [image-orientation:none]"
                 style:transform={tf}
                 style:transform-origin="center center"
                 draggable="false"

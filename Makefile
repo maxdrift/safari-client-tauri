@@ -7,7 +7,10 @@
 	clippy clippy-fix fmt fmt-check \
 	tauri-build tauri-build-debug \
 	clean clean-deep ci verify quality \
-	rustdoc
+	rustdoc \
+	version-show version-bump \
+	version-bump-patch version-bump-minor version-bump-major \
+	version-release-patch version-release-minor version-release-major
 
 NPM := npm
 CARGO := cargo
@@ -53,6 +56,14 @@ help:
 	@echo "Clean:"
 	@echo "  make clean            Remove build/, .svelte-kit, Rust target"
 	@echo "  make clean-deep       clean + node_modules (re-run make install)"
+	@echo ""
+	@echo "Version (before tagging a release):"
+	@echo "  make version-show              Print current version (package.json)"
+	@echo "  make version-bump-patch        Bump patch, sync npm + Cargo + Tauri + lockfiles"
+	@echo "  make version-bump-minor / version-bump-major"
+	@echo "  make version-bump BUMP=patch   Same as patch (BUMP=minor|major)"
+	@echo "  make version-release-patch     Bump + commit + tag vX.Y.Z + push (omit push: PUSH=0)"
+	@echo "  make version-release-minor / version-release-major"
 
 install:
 	$(NPM) ci
@@ -124,3 +135,28 @@ verify: quality tauri-build-debug
 	@echo "verify: OK"
 
 ci: verify
+
+version-show:
+	@node -p "require('./package.json').version"
+
+version-bump-patch:
+	@bash scripts/bump-version.sh patch
+
+version-bump-minor:
+	@bash scripts/bump-version.sh minor
+
+version-bump-major:
+	@bash scripts/bump-version.sh major
+
+version-bump:
+	@test -n "$(BUMP)" || (echo "Usage: make version-bump BUMP=patch|minor|major" >&2; exit 1)
+	@bash scripts/bump-version.sh "$(BUMP)"
+
+version-release-patch:
+	@bash scripts/release-version.sh patch
+
+version-release-minor:
+	@bash scripts/release-version.sh minor
+
+version-release-major:
+	@bash scripts/release-version.sh major

@@ -1,6 +1,8 @@
+pub mod exif;
 pub mod transform;
 pub mod thumbnails;
 
+pub use exif::{dimensions_after_exif, read_exif_orientation};
 pub use transform::{compose_user_action, UserAction};
 pub use thumbnails::{
     generate_thumbnails_for_slide, remove_thumbnails_for_basename, slide_dto_lazy_from_path,

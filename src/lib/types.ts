@@ -17,6 +17,8 @@ export interface Slide {
   subjectId: number;
   transformId: number;
   thumbnails: ThumbnailPaths;
+  /** EXIF orientation tag 1–8; default 1 (normal). */
+  exifOrientation?: number;
   /** True until the preview cache files are written (background generation). */
   thumbnailsPending?: boolean;
   selected?: boolean;
@@ -36,6 +38,7 @@ export interface PersistedSlide {
   category: Category;
   subjectId: number;
   transformId: number;
+  exifOrientation?: number;
 }
 
 export interface AppState {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { convertFileSrc } from "@tauri-apps/api/core";
   import * as app from "$lib/app.svelte";
-  import { transformIdToCss } from "$lib/utils/transform";
+  import { displayTransformId, transformIdToCss } from "$lib/utils/transform";
   import { categoryLabel } from "$lib/utils/i18n";
 
   interface Props {
@@ -41,7 +41,11 @@
    * when opening the lightbox.
    */
   const displaySrc = $derived(slide ? convertFileSrc(slide.path) : "");
-  const tf = $derived(slide ? transformIdToCss(slide.transformId) : "");
+  const tf = $derived(
+    slide
+      ? transformIdToCss(displayTransformId(slide.transformId, slide.exifOrientation))
+      : "",
+  );
 
   /** Local decode state only (file is already on disk when the slide exists). */
   let imgDecoded = $state(false);
@@ -49,6 +53,7 @@
   $effect(() => {
     void slide?.id;
     void slide?.transformId;
+    void slide?.exifOrientation;
     imgDecoded = false;
   });
 
@@ -86,11 +91,11 @@
           ></div>
         </div>
       {/if}
-      {#key `${slide.id}-${slide.transformId}-${displaySrc}`}
+      {#key `${slide.id}-${slide.transformId}-${slide.exifOrientation}-${displaySrc}`}
         <img
           src={displaySrc}
           alt={slide.id}
-          class="h-full w-full object-contain transition-opacity duration-150"
+          class="h-full w-full object-contain transition-opacity duration-150 [image-orientation:none]"
           class:opacity-0={!imgDecoded}
           class:opacity-100={imgDecoded}
           style:transform={tf}
