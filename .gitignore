@@ -7,5 +7,7 @@ src-tauri/target
 .env
 .env.*
 !.env.example
+# Tauri updater signing key (never commit)
+src-tauri/.updater/signing.key
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

@@ -2,11 +2,13 @@
   import { browser } from "$app/environment";
   import "../app.css";
   import { initTheme } from "$lib/app.svelte";
+  import { maybeOfferUpdate } from "$lib/updater";
   import { onMount } from "svelte";
 
   if (browser) initTheme();
 
   onMount(() => {
+    void maybeOfferUpdate();
     const prevent = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();

@@ -57,11 +57,16 @@ jobs:
       # macOS: sign the app and DMG via APPLE_* (see https://v1.tauri.app/v1/guides/distribution/sign-macos).
       # Do not set APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID (or API key trio) here — that skips notarization.
       # Notarization needs a paid Apple Developer Program membership; signing alone does not require it.
+      #
+      # Updater (Tauri v2): set repo secret TAURI_SIGNING_PRIVATE_KEY to the full contents of
+      # src-tauri/.updater/signing.key (must match pubkey in tauri.conf.json). See:
+      # https://v2.tauri.app/plugin/updater/
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: true
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -71,4 +76,5 @@ jobs:
           releaseBody: "Scarica l'installer per la tua piattaforma dagli asset."
           releaseDraft: true
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
