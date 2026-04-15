@@ -61,5 +61,8 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      # Updater signing needs TAURI_SIGNING_PRIVATE_KEY; CI does not use release secrets.
+      # Merge config to skip updater bundles here — release.yml still builds signed update artifacts.
       - name: Tauri build (debug)
-        run: npm run tauri build -- --debug
+        shell: bash
+        run: npm run tauri build -- --debug --config '{"bundle":{"createUpdaterArtifacts":false}}'
