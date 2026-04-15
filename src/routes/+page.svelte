@@ -2,6 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open, save, message } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
+  import { FEATURE_FLAG_NAMES, setFeatureFlag } from "svelte-dnd-action";
   import * as app from "$lib/app.svelte";
   import type { FilterTab, Slide } from "$lib/types";
   import CompetitorExportDialog from "$lib/components/CompetitorExportDialog.svelte";
@@ -82,6 +83,7 @@
   );
 
   onMount(async () => {
+    setFeatureFlag(FEATURE_FLAG_NAMES.USE_COMPUTED_STYLE_INSTEAD_OF_BOUNDING_RECT, true);
     try {
       await app.initApp();
     } catch (e) {
