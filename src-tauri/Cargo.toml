@@ -1,6 +1,6 @@
 [package]
 name = "safari-client"
-version = "0.2.0"
+version = "0.2.1"
 description = "Safari Client — scheda concorrente per Safari Fotosub"
 authors = ["maxdrift"]
 edition = "2021"
