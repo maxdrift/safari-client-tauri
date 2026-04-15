@@ -136,6 +136,10 @@ describe("SlideTile (grid uses original path)", () => {
     await tick();
 
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+
+    app.slidesRenderEpoch.n++;
+    await tick();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it("uses slide.path for src after background drain (pending flag unrelated to grid img)", async () => {

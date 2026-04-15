@@ -47,13 +47,25 @@
       : "",
   );
 
+  /**
+   * Identity of what the `<img>` displays. Must NOT invalidate on unrelated `slidesRenderEpoch`
+   * bumps (reorder, selection, etc.) or every tile would flash the decode spinner again.
+   */
+  const imageDecodeKey = $derived.by(() => {
+    void app.slidesRenderEpoch.n;
+    const s = app.slides.find((x) => x.id === slideId) ?? null;
+    if (!s) return "";
+    return JSON.stringify([s.id, s.transformId, s.exifOrientation, s.path]);
+  });
+
   /** Local decode state only (file is already on disk when the slide exists). */
   let imgDecoded = $state(false);
+  let prevImageDecodeKey = "";
 
   $effect(() => {
-    void slide?.id;
-    void slide?.transformId;
-    void slide?.exifOrientation;
+    const k = imageDecodeKey;
+    if (k === prevImageDecodeKey) return;
+    prevImageDecodeKey = k;
     imgDecoded = false;
   });
 

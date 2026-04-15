@@ -15,7 +15,11 @@ export const slides = $state<Slide[]>([]);
 /** Incremented on slide list / thumbnail updates so UI `$derived.by` invalidates across module boundaries. Use `.n` mutation only (Svelte forbids reassigning exported `$state` primitives). */
 export const slidesRenderEpoch = $state({ n: 0 });
 
-/** Bumped to force-remount `SlideGrid` (see `{#key}` in `+page.svelte`) after bulk import — works around dndzone/Svelte leaving tiles stale until a tab switch. */
+/**
+ * Bumped to force-remount `SlideGrid` (see `{#key}` in `+page.svelte`) after bulk import / CSV —
+ * works around dndzone/Svelte leaving tiles stale until a tab switch.
+ * Not bumped on session restore: the grid mounts fresh when slides first appear, and remounting would flash every tile’s decode spinner.
+ */
 export const gridLayoutEpoch = $state({ n: 0 });
 
 function bumpGridLayoutEpoch(): void {
@@ -124,11 +128,6 @@ export async function initApp(): Promise<void> {
     console.error(e);
   }
   void drainThumbnailQueue();
-  if (slides.length > 0) {
-    void tick().then(() => {
-      requestAnimationFrame(() => bumpGridLayoutEpoch());
-    });
-  }
 }
 
 export function mergeIncoming(existing: Slide[], incoming: Slide[]): Slide[] {
