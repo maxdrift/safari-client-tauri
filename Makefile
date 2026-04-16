@@ -10,7 +10,11 @@
 	rustdoc \
 	version-show version-bump \
 	version-bump-patch version-bump-minor version-bump-major \
-	version-release-patch version-release-minor version-release-major
+	version-release-patch version-release-minor version-release-major \
+	version-bump-legacy-patch version-bump-legacy-minor version-bump-legacy-major \
+	version-bump-legacy \
+	version-release-legacy-patch version-release-legacy-minor version-release-legacy-major \
+	version-release-legacy
 
 NPM := npm
 CARGO := cargo
@@ -64,6 +68,12 @@ help:
 	@echo "  make version-bump BUMP=patch   Same as patch (BUMP=minor|major)"
 	@echo "  make version-release-patch     Bump + commit + tag vX.Y.Z + push (omit push: PUSH=0)"
 	@echo "  make version-release-minor / version-release-major"
+	@echo ""
+	@echo "Version — legacy line (tag vX.Y.Z-legacy, use on backport/tailwind-v3):"
+	@echo "  make version-bump-legacy-patch / version-bump-legacy-minor / version-bump-legacy-major"
+	@echo "  make version-bump-legacy BUMP=patch"
+	@echo "  make version-release-legacy-patch / version-release-legacy-minor / version-release-legacy-major"
+	@echo "  make version-release-legacy BUMP=patch   (set PUSH=0 to skip push)"
 
 install:
 	$(NPM) ci
@@ -160,3 +170,30 @@ version-release-minor:
 
 version-release-major:
 	@bash scripts/release-version.sh major
+
+# Legacy WebKit backport: same semver in package.json / Tauri, tag is vX.Y.Z-legacy (not vX.Y.Z).
+version-bump-legacy-patch:
+	@bash scripts/bump-version.sh patch
+
+version-bump-legacy-minor:
+	@bash scripts/bump-version.sh minor
+
+version-bump-legacy-major:
+	@bash scripts/bump-version.sh major
+
+version-bump-legacy:
+	@test -n "$(BUMP)" || (echo "Usage: make version-bump-legacy BUMP=patch|minor|major" >&2; exit 1)
+	@bash scripts/bump-version.sh "$(BUMP)"
+
+version-release-legacy-patch:
+	@bash scripts/release-version-legacy.sh patch
+
+version-release-legacy-minor:
+	@bash scripts/release-version-legacy.sh minor
+
+version-release-legacy-major:
+	@bash scripts/release-version-legacy.sh major
+
+version-release-legacy:
+	@test -n "$(BUMP)" || (echo "Usage: make version-release-legacy BUMP=patch|minor|major" >&2; exit 1)
+	@bash scripts/release-version-legacy.sh "$(BUMP)"
