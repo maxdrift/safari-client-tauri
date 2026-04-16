@@ -9,6 +9,8 @@ const isVitest = Boolean(process.env.VITEST);
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  // Required so `import.meta.env.TAURI_ENV_PLATFORM` exists in the built bundle (see Tauri Vite guide).
+  envPrefix: ["VITE_", "TAURI_ENV_*"],
   plugins: [tailwindcss(), sveltekit()],
   // Vitest must resolve the client Svelte build so `render()` can mount components (not SSR).
   ...(isVitest

@@ -2,12 +2,21 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 
+function isTauriShell(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    // `__TAURI_INTERNALS__` is always injected in the Tauri webview (runtime).
+    // `TAURI_ENV_PLATFORM` is compile-time (needs `envPrefix` + `tauri build`); keep both.
+    ("__TAURI_INTERNALS__" in window || Boolean(import.meta.env.TAURI_ENV_PLATFORM))
+  );
+}
+
 /**
  * Checks GitHub Releases `latest.json` (from tauri-action) and prompts to install.
  * Skips in dev and in non-Tauri (browser) builds.
  */
 export async function maybeOfferUpdate(): Promise<void> {
-  if (!import.meta.env.TAURI_ENV_PLATFORM || import.meta.env.DEV) return;
+  if (import.meta.env.DEV || !isTauriShell()) return;
 
   try {
     const update = await check();
