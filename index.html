@@ -282,22 +282,72 @@
       .hidden {
         display: none !important;
       }
+
+      .lang-switch {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .lang-switch span[aria-hidden="true"] {
+        opacity: 0.4;
+        user-select: none;
+      }
+
+      .lang-btn {
+        font: inherit;
+        padding: 0.25rem 0.5rem;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .lang-btn:hover {
+        color: var(--text);
+      }
+
+      .lang-btn[aria-current="true"] {
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+        background: var(--accent-dim);
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <header>
+        <div
+          class="lang-switch"
+          role="navigation"
+          aria-label="Language"
+          id="lang-switch"
+        >
+          <button type="button" class="lang-btn" data-set-lang="en" aria-current="true">
+            English
+          </button>
+          <span aria-hidden="true">·</span>
+          <button type="button" class="lang-btn" data-set-lang="it">Italiano</button>
+        </div>
         <div class="badge">
           <span class="badge-dot" aria-hidden="true"></span>
-          Official downloads
+          <span data-i18n="badge">Official downloads</span>
         </div>
         <h1>Safari Client</h1>
-        <p class="lede">
+        <p class="lede" data-i18n="lede">
           Desktop app for Safari Fotosub-style competitions (scheda concorrente). Pick the
           option that matches your computer — no account required.
         </p>
         <p class="version" id="version-line">
-          <span id="version-text">Checking latest version…</span>
+          <span id="version-text" data-i18n="version_checking">Checking latest version…</span>
         </p>
       </header>
 
@@ -305,23 +355,23 @@
 
       <div id="loading" class="loading">
         <div class="loading-spinner" aria-hidden="true"></div>
-        <p>Loading download links…</p>
+        <p data-i18n="loading">Loading download links…</p>
       </div>
 
       <div id="content" class="hidden">
         <div class="grid" id="cards"></div>
-        <p class="note">
-          <strong style="color: var(--text)">Mac users:</strong> If macOS says the app is from an
-          unidentified developer, open it via <em>System Settings → Privacy &amp; Security</em> and
-          choose Open anyway, or right-click the app and choose Open.
-        </p>
+        <p class="note" id="mac-note"></p>
       </div>
 
       <footer>
         <p>
-          <a href="https://github.com/maxdrift/safari-client-tauri">Source code on GitHub</a>
+          <a href="https://github.com/maxdrift/safari-client-tauri" data-i18n="footer_source"
+            >Source code on GitHub</a
+          >
           ·
-          <a href="https://github.com/maxdrift/safari-client-tauri/releases">All releases</a>
+          <a href="https://github.com/maxdrift/safari-client-tauri/releases" data-i18n="footer_releases"
+            >All releases</a
+          >
         </p>
       </footer>
     </div>
@@ -330,57 +380,203 @@
       (function () {
         const REPO = "maxdrift/safari-client-tauri";
         const API = "https://api.github.com/repos/" + REPO + "/releases/latest";
+        const STORAGE_KEY = "safari-client-landing-lang";
 
-        function isInstallerAsset(name) {
-          if (!name || /latest\.json$/i.test(name)) return false;
-          if (/\.sig$/i.test(name)) return false;
-          return true;
+        const I18N = {
+          en: {
+            html_lang: "en",
+            lang_switch_aria: "Language",
+            title: "Safari Client — Download",
+            meta_description:
+              "Download Safari Client — a desktop app for Safari Fotosub-style competitions. Choose your operating system below.",
+            badge: "Official downloads",
+            lede:
+              "Desktop app for Safari Fotosub-style competitions (scheda concorrente). Pick the option that matches your computer — no account required.",
+            version_checking: "Checking latest version…",
+            version_latest: "Latest release:",
+            version_unknown: "Could not detect the latest version.",
+            loading: "Loading download links…",
+            note_mac:
+              '<strong style="color: var(--text)">Mac users:</strong> If macOS says the app is from an unidentified developer, open it via <em>System Settings → Privacy &amp; Security</em> and choose Open anyway, or right-click the app and choose Open.',
+            footer_source: "Source code on GitHub",
+            footer_releases: "All releases",
+            platform_mac_arm_title: "Mac — Apple Silicon",
+            platform_mac_arm_subtitle: "M1, M2, M3, or newer",
+            platform_mac_intel_title: "Mac — Intel",
+            platform_mac_intel_subtitle: "Older Macs with Intel processors",
+            platform_windows_title: "Windows",
+            platform_windows_subtitle: "Windows 10 or 11 (64-bit)",
+            platform_linux_title: "Linux",
+            platform_linux_subtitle: "AppImage (most distros) or Debian package",
+            download: "Download",
+            download_deb: "Download .deb",
+            download_appimage: "Download AppImage",
+            not_available: "Not available in this release",
+            error_no_assets:
+              "The latest release has no downloadable files yet. Try the “All releases” link below, or check back after the next build.",
+            error_fetch: "Could not load release information",
+            error_network:
+              "Network error. Open the GitHub releases page below to download manually.",
+          },
+          it: {
+            html_lang: "it",
+            lang_switch_aria: "Lingua",
+            title: "Safari Client — Download",
+            meta_description:
+              "Scarica Safari Client, l’app desktop per gare in stile Safari Fotosub. Scegli il sistema operativo qui sotto.",
+            badge: "Download ufficiali",
+            lede:
+              "App desktop per gare in stile Safari Fotosub (scheda concorrente). Scegli la versione adatta al tuo computer — non serve un account.",
+            version_checking: "Ricerca dell’ultima versione…",
+            version_latest: "Ultima release:",
+            version_unknown: "Impossibile rilevare l’ultima versione.",
+            loading: "Caricamento dei link di download…",
+            note_mac:
+              '<strong style="color: var(--text)">Utenti Mac:</strong> se macOS indica che l’app proviene da uno sviluppatore non identificato, aprila da <em>Impostazioni di Sistema → Privacy e sicurezza</em> con Apri comunque, oppure fai clic destro sull’app e scegli Apri.',
+            footer_source: "Codice sorgente su GitHub",
+            footer_releases: "Tutte le release",
+            platform_mac_arm_title: "Mac — Apple Silicon",
+            platform_mac_arm_subtitle: "M1, M2, M3 o più recenti",
+            platform_mac_intel_title: "Mac — Intel",
+            platform_mac_intel_subtitle: "Mac Intel meno recenti",
+            platform_windows_title: "Windows",
+            platform_windows_subtitle: "Windows 10 o 11 (64 bit)",
+            platform_linux_title: "Linux",
+            platform_linux_subtitle: "AppImage (molte distro) oppure pacchetto Debian",
+            download: "Scarica",
+            download_deb: "Scarica .deb",
+            download_appimage: "Scarica AppImage",
+            not_available: "Non disponibile in questa release",
+            error_no_assets:
+              "L’ultima release non contiene ancora file scaricabili. Prova il link «Tutte le release» qui sotto, o riprova dopo il prossimo build.",
+            error_fetch: "Impossibile caricare le informazioni sulla release",
+            error_network:
+              "Errore di rete. Apri la pagina delle release su GitHub qui sotto per scaricare manualmente.",
+          },
+        };
+
+        var currentLang;
+        var lastFetch = null;
+        var lastErrorKind = null;
+        var lastFetchHttpStatus = null;
+
+        function detectLang() {
+          var params = new URLSearchParams(window.location.search);
+          var q = params.get("lang");
+          if (q === "it" || q === "en") return q;
+          try {
+            var s = localStorage.getItem(STORAGE_KEY);
+            if (s === "it" || s === "en") return s;
+          } catch (e) {}
+          var nav = navigator.language || "";
+          if (nav.toLowerCase().startsWith("it")) return "it";
+          return "en";
         }
 
-        const PLATFORMS = [
-          {
-            id: "mac-arm",
-            title: "Mac — Apple Silicon",
-            subtitle: "M1, M2, M3, or newer",
-            match: (name) =>
-              /\.dmg$/i.test(name) && /aarch64|arm64/i.test(name),
-          },
-          {
-            id: "mac-intel",
-            title: "Mac — Intel",
-            subtitle: "Older Macs with Intel processors",
-            match: (name) =>
-              /\.dmg$/i.test(name) &&
-              !/aarch64|arm64/i.test(name) &&
-              (/x86_64|_x64\.dmg/i.test(name) || /intel/i.test(name)),
-          },
-          {
-            id: "windows",
-            title: "Windows",
-            subtitle: "Windows 10 or 11 (64-bit)",
-            match: (name) =>
-              /\.msi$/i.test(name) ||
-              (/\.exe$/i.test(name) && /setup|installer|x64|win|en-US/i.test(name)),
-            fallback: (assets) =>
-              assets.find((a) => /\.msi$/i.test(a.name)) ||
-              assets.find((a) => /\.exe$/i.test(a.name)),
-          },
-          {
-            id: "linux",
-            title: "Linux",
-            subtitle: "AppImage (most distros) or Debian package",
-            match: (name) => /\.AppImage$/i.test(name) || /\.deb$/i.test(name),
-            prefer: (candidates) => {
-              const appimage = candidates.find((c) => /\.AppImage$/i.test(c.name));
-              if (appimage) return appimage;
-              const deb = candidates.find((c) => /\.deb$/i.test(c.name));
-              return deb || candidates[0];
+        function t(key) {
+          var pack = I18N[currentLang] || I18N.en;
+          return pack[key] !== undefined ? pack[key] : I18N.en[key] || key;
+        }
+
+        function setUrlLang(lang) {
+          var url = new URL(window.location.href);
+          if (lang === "en") url.searchParams.delete("lang");
+          else url.searchParams.set("lang", lang);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+
+        function applyStaticCopy() {
+          document.documentElement.lang = t("html_lang");
+          document.title = t("title");
+          var meta = document.querySelector('meta[name="description"]');
+          if (meta) meta.setAttribute("content", t("meta_description"));
+
+          document.querySelectorAll("[data-i18n]").forEach(function (el) {
+            var key = el.getAttribute("data-i18n");
+            if (key && I18N.en[key] !== undefined) el.textContent = t(key);
+          });
+
+          var note = document.getElementById("mac-note");
+          if (note) note.innerHTML = t("note_mac");
+
+          document.querySelectorAll(".lang-btn").forEach(function (btn) {
+            var l = btn.getAttribute("data-set-lang");
+            btn.setAttribute("aria-current", l === currentLang ? "true" : "false");
+          });
+
+          var langSwitch = document.getElementById("lang-switch");
+          if (langSwitch) langSwitch.setAttribute("aria-label", t("lang_switch_aria"));
+        }
+
+        function platformDefs() {
+          return [
+            {
+              id: "mac-arm",
+              titleKey: "platform_mac_arm_title",
+              subtitleKey: "platform_mac_arm_subtitle",
+              match: function (name) {
+                return /\.dmg$/i.test(name) && /aarch64|arm64/i.test(name);
+              },
             },
-          },
-        ];
+            {
+              id: "mac-intel",
+              titleKey: "platform_mac_intel_title",
+              subtitleKey: "platform_mac_intel_subtitle",
+              match: function (name) {
+                return (
+                  /\.dmg$/i.test(name) &&
+                  !/aarch64|arm64/i.test(name) &&
+                  (/x86_64|_x64\.dmg/i.test(name) || /intel/i.test(name))
+                );
+              },
+            },
+            {
+              id: "windows",
+              titleKey: "platform_windows_title",
+              subtitleKey: "platform_windows_subtitle",
+              match: function (name) {
+                return (
+                  /\.msi$/i.test(name) ||
+                  (/\.exe$/i.test(name) &&
+                    /setup|installer|x64|win|en-US/i.test(name))
+                );
+              },
+              fallback: function (assets) {
+                return (
+                  assets.find(function (a) {
+                    return /\.msi$/i.test(a.name);
+                  }) ||
+                  assets.find(function (a) {
+                    return /\.exe$/i.test(a.name);
+                  })
+                );
+              },
+            },
+            {
+              id: "linux",
+              titleKey: "platform_linux_title",
+              subtitleKey: "platform_linux_subtitle",
+              match: function (name) {
+                return /\.AppImage$/i.test(name) || /\.deb$/i.test(name);
+              },
+              prefer: function (candidates) {
+                var appimage = candidates.find(function (c) {
+                  return /\.AppImage$/i.test(c.name);
+                });
+                if (appimage) return appimage;
+                var deb = candidates.find(function (c) {
+                  return /\.deb$/i.test(c.name);
+                });
+                return deb || candidates[0];
+              },
+            },
+          ];
+        }
 
         function pickAsset(assets, platform) {
-          const matches = assets.filter((a) => platform.match(a.name));
+          var matches = assets.filter(function (a) {
+            return platform.match(a.name);
+          });
           if (matches.length > 0) {
             return platform.prefer ? platform.prefer(matches) : matches[0];
           }
@@ -389,7 +585,7 @@
         }
 
         function iconSvg(id) {
-          const icons = {
+          var icons = {
             "mac-arm":
               '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="11" rx="2"/><path d="M9 21h6M12 17v4"/></svg>',
             "mac-intel":
@@ -402,47 +598,50 @@
           return icons[id] || icons.linux;
         }
 
-        function renderCards(assets, release) {
-          const container = document.getElementById("cards");
-          container.innerHTML = "";
+        function downloadLabel(filename) {
+          var lower = filename.toLowerCase();
+          if (lower.endsWith(".deb")) return t("download_deb");
+          if (lower.endsWith(".appimage")) return t("download_appimage");
+          return t("download");
+        }
 
-          PLATFORMS.forEach((p) => {
-            const asset = pickAsset(assets, p);
-            const card = document.createElement("article");
+        function renderCards(assets, release) {
+          var container = document.getElementById("cards");
+          container.innerHTML = "";
+          var PLATFORMS = platformDefs();
+
+          PLATFORMS.forEach(function (p) {
+            var asset = pickAsset(assets, p);
+            var card = document.createElement("article");
             card.className = "card";
             card.setAttribute("aria-labelledby", "h-" + p.id);
 
-            const head = document.createElement("div");
+            var head = document.createElement("div");
             head.className = "card-head";
             head.innerHTML =
               '<div class="icon">' +
               iconSvg(p.id) +
-              "</div><div><h2 id=\"h-" +
+              '</div><div><h2 id="h-' +
               p.id +
               '">' +
-              p.title +
+              t(p.titleKey) +
               "</h2><p>" +
-              p.subtitle +
+              t(p.subtitleKey) +
               "</p></div>";
 
-            const btn = document.createElement("a");
+            var btn = document.createElement("a");
             btn.className = "btn";
             if (asset) {
               btn.href = asset.browser_download_url;
               btn.download = "";
-              const label = asset.name.toLowerCase().endsWith(".deb")
-                ? "Download .deb"
-                : asset.name.toLowerCase().endsWith(".appimage")
-                  ? "Download AppImage"
-                  : "Download";
               btn.innerHTML =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> ' +
-                label;
+                downloadLabel(asset.name);
             } else {
               btn.href = "#";
               btn.setAttribute("aria-disabled", "true");
               btn.classList.add("is-disabled");
-              btn.textContent = "Not available in this release";
+              btn.textContent = t("not_available");
             }
 
             card.appendChild(head);
@@ -450,47 +649,114 @@
             container.appendChild(card);
           });
 
-          const tag = release.tag_name || release.name || "";
+          var tag = (release && (release.tag_name || release.name)) || "";
           document.getElementById("version-text").innerHTML =
-            'Latest release: <strong>' + (tag || "—") + "</strong>";
+            t("version_latest") + " <strong>" + (tag || "—") + "</strong>";
         }
 
-        function showError(msg) {
-          const el = document.getElementById("error-banner");
+        function showErrorTranslated(kind, httpStatus) {
+          lastErrorKind = kind;
+          var el = document.getElementById("error-banner");
+          var msg =
+            kind === "no_assets"
+              ? t("error_no_assets")
+              : kind === "fetch"
+                ? t("error_fetch") +
+                  (httpStatus ? " (" + httpStatus + ")." : ".")
+                : t("error_network");
           el.textContent = msg;
           el.classList.remove("hidden");
         }
 
-        fetch(API)
-          .then(function (r) {
-            if (!r.ok) throw new Error("Could not load release information (" + r.status + ").");
-            return r.json();
-          })
-          .then(function (release) {
-            document.getElementById("loading").classList.add("hidden");
-            document.getElementById("content").classList.remove("hidden");
+        function hideError() {
+          lastErrorKind = null;
+          document.getElementById("error-banner").classList.add("hidden");
+        }
 
-            const assets = (release.assets || []).filter((a) =>
-              isInstallerAsset(a.name)
-            );
-            if (assets.length === 0) {
-              showError(
-                "The latest release has no downloadable files yet. Try the “All releases” link below, or check back after the next build."
-              );
+        function setLang(lang) {
+          if (lang !== "it" && lang !== "en") return;
+          currentLang = lang;
+          try {
+            localStorage.setItem(STORAGE_KEY, lang);
+          } catch (e) {}
+          setUrlLang(lang);
+          applyStaticCopy();
+
+          if (lastFetch) {
+            renderCards(lastFetch.assets, lastFetch.release);
+            if (lastFetch.assets.length === 0) {
+              showErrorTranslated("no_assets");
+            } else {
+              hideError();
             }
-            renderCards(assets, release);
-          })
-          .catch(function (err) {
-            document.getElementById("loading").classList.add("hidden");
-            document.getElementById("content").classList.remove("hidden");
-            document.getElementById("version-text").textContent =
-              "Could not detect the latest version.";
-            showError(
-              err.message ||
-                "Network error. Open the GitHub releases page below to download manually."
+          } else if (lastErrorKind) {
+            showErrorTranslated(
+              lastErrorKind,
+              lastErrorKind === "fetch" ? lastFetchHttpStatus : undefined
             );
-            renderCards([], {});
+          }
+        }
+
+        function wireLangButtons() {
+          document.querySelectorAll(".lang-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var lang = btn.getAttribute("data-set-lang");
+              if (lang) setLang(lang);
+            });
           });
+        }
+
+        currentLang = detectLang();
+        applyStaticCopy();
+        wireLangButtons();
+
+        function isInstallerAsset(name) {
+          if (!name || /latest\.json$/i.test(name)) return false;
+          if (/\.sig$/i.test(name)) return false;
+          return true;
+        }
+
+        function runFetch() {
+          fetch(API)
+            .then(function (r) {
+              lastFetchHttpStatus = r.status;
+              if (!r.ok) {
+                lastFetch = null;
+                throw { kind: "fetch", status: r.status };
+              }
+              return r.json();
+            })
+            .then(function (release) {
+              document.getElementById("loading").classList.add("hidden");
+              document.getElementById("content").classList.remove("hidden");
+
+              var assets = (release.assets || []).filter(function (a) {
+                return isInstallerAsset(a.name);
+              });
+              lastFetch = { assets: assets, release: release };
+              hideError();
+
+              if (assets.length === 0) {
+                showErrorTranslated("no_assets");
+              }
+              renderCards(assets, release);
+            })
+            .catch(function (err) {
+              document.getElementById("loading").classList.add("hidden");
+              document.getElementById("content").classList.remove("hidden");
+              lastFetch = null;
+              document.getElementById("version-text").textContent = t("version_unknown");
+
+              if (err && err.kind === "fetch") {
+                showErrorTranslated("fetch", err.status);
+              } else {
+                showErrorTranslated("network");
+              }
+              renderCards([], {});
+            });
+        }
+
+        runFetch();
       })();
     </script>
   </body>
