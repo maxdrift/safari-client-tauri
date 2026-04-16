@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Bump version, commit, tag vX.Y.Z-legacy, and optionally push (triggers release-legacy.yml).
 # Run from branch backport/tailwind-v3 (or your legacy line).
+#
+# App version in package.json / Cargo.toml / tauri.conf.json must stay plain semver (e.g. 0.2.3).
+# Do not use prerelease suffixes like 0.2.3-legacy there — Windows MSI/NSIS bundling fails on them.
+# The "-legacy" distinction is only the git tag (v0.2.3-legacy), not the embedded app version.
 # Skip push: PUSH=0 make version-release-legacy-patch
 set -euo pipefail
 
