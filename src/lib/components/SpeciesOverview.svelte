@@ -30,7 +30,7 @@
 </script>
 
 <div
-  class="hidden w-72 shrink-0 flex-col border-l border-zinc-200 bg-zinc-100/80 lg:flex dark:border-zinc-800 dark:bg-zinc-900/50"
+  class="flex w-72 shrink-0 flex-col border-l border-zinc-200 bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-900/50"
 >
   <div class="border-b border-zinc-200 p-2 dark:border-zinc-800">
     <h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
