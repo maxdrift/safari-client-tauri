@@ -73,7 +73,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Safari Client v__VERSION__
-          releaseBody: "Scarica l'installer per la tua piattaforma dagli asset."
+          generateReleaseNotes: true
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
