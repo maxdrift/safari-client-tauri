@@ -1,6 +1,6 @@
 {
   "name": "safari-client",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Desktop client for Safari Fotosub-style competitions (scheda concorrente).",
   "type": "module",
   "scripts": {
