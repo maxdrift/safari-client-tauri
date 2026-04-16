@@ -1,4 +1,4 @@
-name: Release
+name: Release (legacy WebKit)
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ !endsWith(github.ref_name, '-legacy') }}
+    if: ${{ endsWith(github.ref_name, '-legacy') }}
     strategy:
       fail-fast: false
       matrix:
@@ -55,13 +55,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # macOS: sign the app and DMG via APPLE_* (see https://v1.tauri.app/v1/guides/distribution/sign-macos).
-      # Do not set APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID (or API key trio) here — that skips notarization.
-      # Notarization needs a paid Apple Developer Program membership; signing alone does not require it.
-      #
-      # Updater (Tauri v2): set repo secret TAURI_SIGNING_PRIVATE_KEY to the full contents of
-      # src-tauri/.updater/signing.key (must match pubkey in tauri.conf.json). See:
-      # https://v2.tauri.app/plugin/updater/
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -72,10 +65,34 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: Safari Client v__VERSION__
+          tagName: ${{ github.ref_name }}
+          releaseName: Safari Client ${{ github.ref_name }} (legacy WebKit)
           generateReleaseNotes: true
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+
+  # Updater endpoint in tauri.conf uses latest-legacy.json; tauri-action uploads latest.json.
+  upstream-alias:
+    name: Upload latest-legacy.json for updater
+    if: ${{ endsWith(github.ref_name, '-legacy') }}
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Duplicate latest.json as latest-legacy.json on release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          mkdir -p /tmp/gh-assets
+          if ! gh release download "$TAG" --pattern 'latest.json' -D /tmp/gh-assets 2>/dev/null; then
+            echo "No latest.json on release $TAG (skip alias)."
+            exit 0
+          fi
+          if [[ -f /tmp/gh-assets/latest.json ]]; then
+            cp /tmp/gh-assets/latest.json latest-legacy.json
+            gh release upload "$TAG" latest-legacy.json --clobber
+            echo "Uploaded latest-legacy.json for updater endpoint."
+          fi
