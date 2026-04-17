@@ -12,7 +12,8 @@
 	version-bump-patch version-bump-minor version-bump-major \
 	version-release-patch version-release-minor version-release-major \
 	version-release-legacy-patch version-release-legacy-minor version-release-legacy-major \
-	version-release-legacy
+	version-release-legacy \
+	version-tag-legacy
 
 NPM := npm
 CARGO := cargo
@@ -70,6 +71,7 @@ help:
 	@echo "Version — legacy line (backport/tailwind-v3): bump with targets above; tag is vX.Y.Z-legacy only via:"
 	@echo "  make version-release-legacy-patch / version-release-legacy-minor / version-release-legacy-major"
 	@echo "  make version-release-legacy BUMP=patch   (set PUSH=0 to skip push)"
+	@echo "  make version-tag-legacy   Tag vX.Y.Z-legacy from current package.json only (no bump; PUSH=0 to skip push)"
 
 install:
 	$(NPM) ci
@@ -181,3 +183,7 @@ version-release-legacy-major:
 version-release-legacy:
 	@test -n "$(BUMP)" || (echo "Usage: make version-release-legacy BUMP=patch|minor|major" >&2; exit 1)
 	@bash scripts/release-version-legacy.sh "$(BUMP)"
+
+# No bump: annotated tag v$(version)-legacy from package.json (same semver as last release work on the branch).
+version-tag-legacy:
+	@bash scripts/tag-version-legacy.sh
