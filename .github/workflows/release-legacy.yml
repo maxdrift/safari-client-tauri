@@ -3,7 +3,7 @@ name: Release (legacy WebKit)
 on:
   push:
     tags:
-      - "v*"
+      - "v*-legacy"
 
 permissions:
   contents: write
