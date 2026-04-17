@@ -79,3 +79,35 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+
+  # Legacy channel manifest: copy highest legacy release's latest.json so
+  # .../releases/latest/download/latest-legacy.json stays in sync for legacy builds.
+  sync-legacy-updater:
+    name: Attach latest-legacy.json from highest legacy release
+    if: ${{ !endsWith(github.ref_name, '-legacy') }}
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy latest.json from highest legacy release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          TAG="${{ github.ref_name }}"
+          LEGACY_TAG=$(gh release list --repo "$REPO" --limit 100 --json tagName -q '.[].tagName' | grep -E '^v.*-legacy$' | sort -V | tail -1 || true)
+          if [[ -z "${LEGACY_TAG:-}" ]]; then
+            echo "No legacy release found; skipping latest-legacy.json."
+            exit 0
+          fi
+          mkdir -p /tmp/gh-assets
+          if ! gh release download "$LEGACY_TAG" --repo "$REPO" --pattern 'latest.json' -D /tmp/gh-assets 2>/dev/null; then
+            echo "No latest.json on legacy release $LEGACY_TAG (skip)."
+            exit 0
+          fi
+          if [[ ! -f /tmp/gh-assets/latest.json ]]; then
+            exit 0
+          fi
+          cp /tmp/gh-assets/latest.json latest-legacy.json
+          gh release upload "$TAG" latest-legacy.json --repo "$REPO" --clobber
+          echo "Uploaded latest-legacy.json from $LEGACY_TAG to $TAG."
