@@ -8,6 +8,7 @@ import type {
   Species,
   ThemePreference,
   ThumbnailPaths,
+  UserPreferences,
 } from "$lib/types";
 import { applyDocumentTheme, THEME_STORAGE_KEY } from "$lib/theme";
 
@@ -62,6 +63,11 @@ export function initTheme(): void {
     });
 }
 export const speciesList = $state<Species[]>([]);
+/** Default competitor name for CSV export filename (persisted in app data). */
+export const exportPrefs = $state({ defaultExportName: "" });
+
+const LEGACY_EXPORT_NAME_KEY = "safari-client-export-competitor-name";
+
 /** Selected slide ids (basename) */
 export const selectedIds = $state<string[]>([]);
 
@@ -115,10 +121,70 @@ export function scheduleSave(): void {
   }, 400);
 }
 
+export function setDefaultExportName(name: string): void {
+  exportPrefs.defaultExportName = name;
+}
+
+export async function persistPreferences(): Promise<void> {
+  const trimmed = exportPrefs.defaultExportName.trim();
+  await invoke("save_preferences_cmd", {
+    prefs: { defaultExportName: trimmed.length > 0 ? trimmed : null } satisfies UserPreferences,
+  });
+}
+
+async function migrateLegacyExportNameIfNeeded(): Promise<void> {
+  if (exportPrefs.defaultExportName !== "") return;
+  try {
+    const legacy = localStorage.getItem(LEGACY_EXPORT_NAME_KEY)?.trim();
+    if (legacy) {
+      exportPrefs.defaultExportName = legacy;
+      await persistPreferences();
+    }
+    localStorage.removeItem(LEGACY_EXPORT_NAME_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function loadPreferencesIntoState(): Promise<void> {
+  const p = await invoke<UserPreferences>("load_preferences_cmd");
+  exportPrefs.defaultExportName = (p.defaultExportName ?? "").trim();
+  await migrateLegacyExportNameIfNeeded();
+}
+
+/** Replace in-memory species list after import or restore (same shape as catalog command). */
+export function replaceSpeciesCatalog(next: Species[]): void {
+  speciesList.length = 0;
+  speciesList.push(...next);
+}
+
+/** Subject IDs used on non-excluded slides that are missing from the current catalog. */
+export function missingSubjectIdsInCatalog(): number[] {
+  const catalogIds = speciesList.map((s) => s.id);
+  const out: number[] = [];
+  for (const slide of slides) {
+    if (slide.category === "excluded") continue;
+    if (slide.subjectId === 0) continue;
+    if (
+      !catalogIds.includes(slide.subjectId) &&
+      !out.includes(slide.subjectId)
+    ) {
+      out.push(slide.subjectId);
+    }
+  }
+  out.sort((a, b) => a - b);
+  return out;
+}
+
 export async function initApp(): Promise<void> {
   const catalog = await invoke<Species[]>("load_species_catalog_cmd");
   speciesList.length = 0;
   speciesList.push(...catalog);
+  try {
+    await loadPreferencesIntoState();
+  } catch (e) {
+    console.error(e);
+  }
   try {
     const restored = await invoke<Slide[]>("restore_slides_cmd");
     slides.length = 0;

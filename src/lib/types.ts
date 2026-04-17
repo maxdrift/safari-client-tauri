@@ -45,4 +45,8 @@ export interface AppState {
   slides: PersistedSlide[];
 }
 
+export interface UserPreferences {
+  defaultExportName?: string | null;
+}
+
 export type ThemePreference = "light" | "dark" | "system";

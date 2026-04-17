@@ -67,4 +67,22 @@ export const I18N = {
   themeLight: "Chiaro",
   themeDark: "Scuro",
   themeSystem: "Sistema",
+  settings: "Impostazioni",
+  settingsTitle: "Impostazioni",
+  settingsSectionSpecies: "Elenco specie (catalogo)",
+  settingsSectionExport: "Esportazione scheda (CSV)",
+  settingsSpeciesBlurb:
+    "L’elenco delle specie di pesce usato quando assegni una specie alle foto e quando importi un CSV delle slide. Non è l’importazione delle slide: quella resta da «Importa CSV» nella barra.",
+  settingsSpeciesFormatHint:
+    "Formato file: una riga per specie, colonne separate da punto e virgola: id;nome_comune;nome_scientifico;coefficiente;versione (come l’elenco predefinito).",
+  settingsSpeciesImport: "Importa CSV elenco…",
+  settingsSpeciesRestore: "Ripristina elenco predefinito",
+  settingsSpeciesImportSuccess: "Elenco specie importato correttamente.",
+  settingsSpeciesImportErrorTitle: "Importazione elenco specie non riuscita",
+  settingsSpeciesRestoreConfirm:
+    "Ripristinare l’elenco specie fornito con l’app? L’elenco personalizzato verrà rimosso.",
+  settingsSpeciesOrphanWarning: (ids: number[]) =>
+    `Attenzione: alcune foto usano ID specie non presenti nel nuovo elenco: ${ids.join(", ")}. Riassegna le specie se necessario.`,
+  settingsExportNameHint:
+    "Nome predefinito per il file scheda_….csv quando esporti la scheda concorrente (dati delle slide). Separato dall’elenco specie sopra.",
 } as const;

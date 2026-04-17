@@ -42,7 +42,7 @@ This file was originally a **forward-looking** plan. It is now **aligned with th
 ## LLM pitfalls (read first)
 
 1. **Package manager:** The repo uses **`npm`** and **`package-lock.json`**, not pnpm. CI runs `npm ci`. Do not introduce pnpm-only scripts without migrating the lockfile.
-2. **State layout:** There is **no** `src/lib/stores/{slides,selection,filter,species}.svelte.ts` split. State lives mainly in **`src/lib/app.svelte.ts`** (`slides`, `selectedIds`, `ui`, `speciesList`, etc.) plus small helpers (`theme.ts`, `i18n.ts`).
+2. **State layout:** There is **no** `src/lib/stores/{slides,selection,filter,species}.svelte.ts` split. State lives mainly in **`src/lib/app.svelte.ts`** (`slides`, `selectedIds`, `ui`, `speciesList`, **`exportPrefs`** (default competitor name for CSV filename), etc.) plus small helpers (`theme.ts`, `i18n.ts`).
 3. **SvelteKit:** The app uses **`src/routes/+layout.svelte`**, **`src/routes/+page.svelte`**, not a root `App.svelte` as the only entry (adapter-static).
 4. **Command names:** Tauri commands are suffixed **`_cmd`** in Rust and invoked as e.g. `invoke("load_slides_from_paths_cmd", …)`. There is no `load_images` / `check_previews` as originally sketched—see **§Rust commands (actual)**.
 5. **Thumbnails (Rust cache vs grid display):** New slides are registered with **`image::image_dimensions`** (fast); preview files (350/512/1024) are written **asynchronously** via **`regenerate_thumbnails_cmd`** and **`drainThumbnailQueue()`** — still required for export/lightbox-adjacent use of cached sizes. **Do not** rely on temp-cache paths for **grid tile `<img>` src**: **`SlideTile`** uses **`convertFileSrc(slide.path)`** (original file), matching **Lightbox**, because WKWebView/`asset://` was unreliable for paths under the system temp preview dir. The tile shows a spinner until **`load`**/`error` on that img, not until `thumbnailsPending` flips.
@@ -65,7 +65,7 @@ This file was originally a **forward-looking** plan. It is now **aligned with th
 | Styling | **Tailwind CSS v4** (`@import "tailwindcss"` in `app.css`, `@custom-variant dark` for class-based theme) |
 | State | `$state` / `$derived` in **`app.svelte.ts`**; theme in **`ui.theme`** + `theme.ts` (`applyDocumentTheme`) |
 | Images | Rust `image` crate; previews under system temp → **`safari-client-previews`** |
-| Persistence | `save_app_state_cmd` / `restore_slides_cmd`; JSON under `SafariClient/state.json` (see README) |
+| Persistence | `save_app_state_cmd` / `restore_slides_cmd`; JSON under `SafariClient/state.json` (see README). Also **`preferences.json`** (default export name) and optional **`elenco_pesci_custom.csv`** (user-imported species catalog); bundled default remains embedded in the binary. |
 | CSV | `export_csv_cmd` — validation + write in Rust |
 | DnD | `svelte-dnd-action` on **All** tab only |
 | Package manager | **npm** |
@@ -79,7 +79,7 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 
 | Invoke name | Role |
 |-------------|------|
-| `load_species_catalog_cmd` | Load bundled species CSV |
+| `load_species_catalog_cmd` | Load active species catalog (custom `elenco_pesci_custom.csv` if valid, else embedded default) |
 | `save_app_state_cmd` | Persist `AppState` |
 | `load_app_state_cmd` | Load raw JSON state |
 | `restore_slides_cmd` | Load persisted slides + build `SlideDto` list with `ensure_previews_for_persisted` (dimensions only; `thumbnails_pending` if cache files missing) |
@@ -88,6 +88,9 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 | `remove_slide_cache_cmd` | Delete cached previews for a basename |
 | `apply_transform_action_cmd` | D4 user action → next `transform_id` |
 | `export_csv_cmd` | Validate + write CSV |
+| `import_species_catalog_cmd` | Validate + copy user CSV to app data, return catalog rows |
+| `restore_default_species_catalog_cmd` | Remove custom catalog file; return embedded default |
+| `load_preferences_cmd` / `save_preferences_cmd` | `UserPreferences` (e.g. default export name) in `preferences.json` |
 
 **Not present:** separate `check_previews` / `load_images` commands as in the old sketch.
 
@@ -95,7 +98,7 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 
 ## Frontend state (actual)
 
-- **`src/lib/app.svelte.ts`:** `slides`, `slidesRenderEpoch`, **`gridLayoutEpoch`** (forces `SlideGrid` remount via `{#key}` in `+page.svelte`), `ui` (`filterTab`, `theme`), `speciesList`, `selectedIds`; helpers `initApp`, `addImagesFromPaths`, `drainThumbnailQueue`, transforms, filters, `normalizeSlide`, etc.
+- **`src/lib/app.svelte.ts`:** `slides`, `slidesRenderEpoch`, **`gridLayoutEpoch`** (forces `SlideGrid` remount via `{#key}` in `+page.svelte`), `ui` (`filterTab`, `theme`), `speciesList`, **`exportPrefs`**, `selectedIds`; helpers `initApp`, `addImagesFromPaths`, `drainThumbnailQueue`, transforms, filters, `normalizeSlide`, `persistPreferences`, `replaceSpeciesCatalog`, etc.
 - **Selection** is `selectedIds: string[]` (ids = basenames), not a `Set` in a separate file.
 - **Species modal** builds synthetic “remove species” row in **`SpeciesModal.svelte`**, not a separate store file.
 
@@ -127,6 +130,7 @@ Registered in `src-tauri/src/lib.rs` (names as invoked from TS):
 
 ## UI features beyond original plan sketch
 
+- **Settings (`SettingsDialog`):** Import **species catalog** CSV (distinct from slide **Import CSV**), restore bundled default, optional warning if slide assignments reference missing species ids; **default competitor name** for export filename (persisted via Tauri prefs, not slide state). Open from **Impostazioni** in `NavBar`.
 - **Theme:** light / dark / system (`ui.theme`, `initTheme` in layout, `localStorage`).
 - **Load progress overlay** when importing many files.
 - **Lightbox:** original file via `convertFileSrc`, keyboard nav, wheel/pinch zoom, pan when zoomed, species + category + selection sidebar, fit vs 100%.
@@ -145,8 +149,9 @@ Key paths:
 - `src/lib/components/*.svelte` (NavBar, TabBar, SlideGrid, SlideTile, Lightbox, …)
 - `src/lib/utils/transform.ts`, `transform.test.ts`, `i18n.ts`
 - `src/lib/actions/nonPassiveWheel.ts`
-- `src-tauri/src/lib.rs`, `commands/{images,export,persistence,species}.rs`, `imaging/{thumbnails,transform}.rs`, `models/`
-- `src-tauri/resources/elenco_pesci_2019.csv`
+- `src-tauri/src/lib.rs`, `commands/{images,export,persistence,preferences,species}.rs`, `imaging/{thumbnails,transform}.rs`, `models/` (incl. `preferences.rs`)
+- `src/lib/components/SettingsDialog.svelte`
+- `src-tauri/resources/elenco_pesci_2026.csv`
 - `.github/workflows/ci.yml`, `release.yml`
 - `Makefile`
 - `docs/PRD.md`

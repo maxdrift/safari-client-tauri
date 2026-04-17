@@ -6,13 +6,15 @@
     message: string;
     onConfirm: () => void;
     onCancel: () => void;
+    /** e.g. z-[60] when stacking above another modal */
+    overlayZClass?: string;
   }
-  let { open, message, onConfirm, onCancel }: Props = $props();
+  let { open, message, onConfirm, onCancel, overlayZClass = "z-50" }: Props = $props();
 </script>
 
 {#if open}
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    class="fixed inset-0 flex items-center justify-center bg-black/60 p-4 {overlayZClass}"
     role="presentation"
     onclick={onCancel}
   >
