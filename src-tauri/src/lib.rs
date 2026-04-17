@@ -6,8 +6,9 @@ use commands::csv_import;
 use commands::export;
 use commands::images;
 use commands::persistence;
+use commands::preferences;
 use commands::species;
-use models::{AppState, SlideDto, SpeciesDto, ThumbnailPaths};
+use models::{AppState, SlideDto, SpeciesDto, ThumbnailPaths, UserPreferences};
 
 #[tauri::command]
 fn load_species_catalog_cmd() -> Result<Vec<SpeciesDto>, String> {
@@ -60,6 +61,26 @@ fn import_csv_cmd(slides: Vec<SlideDto>, path: String) -> Result<csv_import::Csv
     csv_import::merge_csv_into_slides(std::path::Path::new(&path), slides)
 }
 
+#[tauri::command]
+fn import_species_catalog_cmd(path: String) -> Result<Vec<SpeciesDto>, String> {
+    species::import_species_catalog(std::path::Path::new(&path))
+}
+
+#[tauri::command]
+fn restore_default_species_catalog_cmd() -> Result<Vec<SpeciesDto>, String> {
+    species::restore_default_species_catalog()
+}
+
+#[tauri::command]
+fn load_preferences_cmd() -> Result<UserPreferences, String> {
+    preferences::load_preferences()
+}
+
+#[tauri::command]
+fn save_preferences_cmd(prefs: UserPreferences) -> Result<(), String> {
+    preferences::save_preferences(&prefs)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -77,6 +98,10 @@ pub fn run() {
             apply_transform_action_cmd,
             export_csv_cmd,
             import_csv_cmd,
+            import_species_catalog_cmd,
+            restore_default_species_catalog_cmd,
+            load_preferences_cmd,
+            save_preferences_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

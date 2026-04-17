@@ -11,6 +11,7 @@
   import LoadProgressOverlay from "$lib/components/LoadProgressOverlay.svelte";
   import Lightbox from "$lib/components/Lightbox.svelte";
   import NavBar from "$lib/components/NavBar.svelte";
+  import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import SlideGrid from "$lib/components/SlideGrid.svelte";
   import SpeciesModal from "$lib/components/SpeciesModal.svelte";
   import SpeciesOverview from "$lib/components/SpeciesOverview.svelte";
@@ -23,16 +24,7 @@
   let confirmDeleteOpen = $state(false);
   let competitorExportOpen = $state(false);
   let competitorNamePrefill = $state("");
-
-  const COMPETITOR_STORAGE_KEY = "safari-client-export-competitor-name";
-
-  function readCachedCompetitor(): string {
-    try {
-      return localStorage.getItem(COMPETITOR_STORAGE_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  }
+  let settingsOpen = $state(false);
 
   function safeCsvBasename(name: string): string {
     const t = name.trim() || "concorrente";
@@ -122,15 +114,16 @@
   }
 
   function openExportDialog() {
-    competitorNamePrefill = readCachedCompetitor();
+    competitorNamePrefill = app.exportPrefs.defaultExportName;
     competitorExportOpen = true;
   }
 
   async function onCompetitorExportConfirm(name: string) {
+    app.setDefaultExportName(name.trim());
     try {
-      localStorage.setItem(COMPETITOR_STORAGE_KEY, name.trim());
-    } catch {
-      /* ignore */
+      await app.persistPreferences();
+    } catch (e) {
+      console.error(e);
     }
     competitorExportOpen = false;
     const base = safeCsvBasename(name);
@@ -219,6 +212,7 @@
   <NavBar
     {selectionCount}
     hasSlides={app.slides.length > 0}
+    onOpenSettings={() => (settingsOpen = true)}
     onImportCsv={importCsv}
     onExport={openExportDialog}
     onDeselectAll={() => app.deselectAllInFilter(visible.map((s) => s.id))}
@@ -318,6 +312,8 @@
   onCancel={() => (competitorExportOpen = false)}
   onConfirm={onCompetitorExportConfirm}
 />
+
+<SettingsDialog settingsOpen={settingsOpen} onClose={() => (settingsOpen = false)} />
 
 <ConfirmDialog
   open={confirmDeleteOpen}

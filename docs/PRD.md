@@ -72,7 +72,7 @@ Each slide is in exactly **one** of three categories:
 
 ### 3.3 Species (subject)
 
-Each slide may have an assigned **species** from a **bundled catalog** (see §6). Assignments use a **numeric id** from that catalog.
+Each slide may have an assigned **species** from the **active species catalog** (see §6). By default this is the **bundled** list; the user may **replace** it with an imported file (§6.4). Assignments use a **numeric id** from that catalog.
 
 - **No species / clear:** Stored on the slide as **`subjectid` 0**. That value is **not** read from the CSV file; it is a **sentinel** meaning “unassigned.” The species picker can still offer a **“Rimuovi specie”** choice as **one row in the same list** as real species so clearing does not need a separate control (see §6.3).
 - Export rules require non-zero species for rows that are exported (see §8).
@@ -154,6 +154,13 @@ When **at least one** slide is selected, the **top bar switches** to a **selecti
 3. The app runs **validation** (§8). If validation fails, show an **error dialog** and **do not** write a file.
 4. If validation succeeds, write the file and show a **success** message.
 
+### 4.10 Settings (catalog and export preferences)
+
+1. The user can open **Settings** (e.g. **Impostazioni**) from the default top bar **without** requiring loaded slides.
+2. **Species catalog:** The user can **import** a semicolon-separated file that matches the **same row shape** as §6.2 (this is **not** the same feature as the top-bar **Import CSV** that merges **slide** metadata—copy in the UI must keep the two distinct). The app validates the file (e.g. unique ids, well-formed rows) and persists the choice for future sessions. The user can **restore the bundled default** catalog shipped with the release.
+3. **Default export name:** The user can set a **default competitor name** used when suggesting the filename for **Export CSV** (e.g. `scheda_….csv`). This is stored as an application preference, separate from slide data.
+4. If the catalog changes while slides still reference **species ids** no longer present, the app should **warn** the user that some assignments may be invalid until they reassign species.
+
 ---
 
 ## 5. Functional requirements
@@ -204,7 +211,7 @@ When **at least one** slide is selected, the **top bar switches** to a **selecti
 
 ### 6.1 Source
 
-The product ships a **catalog file** (in the reference app: `elenco_pesci_2019.csv`). A reimplementation must ship **equivalent data**—either the same file or embedded data.
+The product ships a **catalog file** (in the reference app: `elenco_pesci_2026.csv`). A reimplementation must ship **equivalent data**—either the same file or embedded data.
 
 ### 6.2 Row format
 
@@ -221,6 +228,12 @@ Each non-empty line:
 ### 6.3 “Rimuovi specie” in the picker (not catalog data)
 
 The official CSV (§6.2) only contains **real** species with **positive** ids. The reference app **injects** a synthetic row when building the list for the species modal: **`id = 0`**, label **“Rimuovi specie”**. That is a **UI convenience** so the same list component can offer “clear assignment” without a separate button. Choosing it sets the slide’s **`subjectid` to 0** (unassigned). It is **not** part of the shipped competition catalog.
+
+### 6.4 User-imported catalog (optional; distinct from slide CSV)
+
+- The product may allow the user to **replace** the bundled catalog by **importing** a CSV file with the **same column semantics** as §6.2 (`;`-separated). That import drives the **species picker**, **species usage overview**, and **validation** when merging **slide** CSV data (§8)—it is **not** the same operation as importing metadata rows for slides via the top-bar **Import CSV** (scheda / slide list).
+- The implementation **persists** the custom catalog in **application data** (alongside other app files—not inside the slide list JSON). The user can **restore** the **bundled default** shipped with the release, which removes the custom file for future sessions.
+- If a custom file is **invalid** or missing, behavior falls back to the **bundled** catalog so the app remains usable.
 
 ---
 
@@ -310,13 +323,18 @@ These eight values enumerate **D₄** in a **fixed** convention so downstream to
 
 The **species usage overview** (§5.8, §10.6) is **derived** from slides + catalog and needs no separate persisted state.
 
+**Application preferences (separate file or location from slide state):**
+
+- **Default competitor name** for export filename suggestions (§4.10).
+- **Custom species catalog** file, if the user imported one (§6.4).
+
 ---
 
 ## 10. UI structure (behavioral, not visual framework)
 
 ### 10.1 Top region
 
-- **Default mode (nothing selected):** Application title and **Export CSV**; export enabled only if there is at least one slide.
+- **Default mode (nothing selected):** Application title; **Settings** (§4.10) always available; **Import CSV** / **Export CSV** for the **slide scheda** (merge metadata / export competitor sheet)—enabled according to product rules (e.g. import/export may require at least one slide). **Do not** label species-catalog actions as generic “CSV import” without distinguishing them from slide CSV (§4.10, §6.4).
 - **Selection mode:** Toolbar for bulk actions (§4.6).
 
 ### 10.2 Tabs

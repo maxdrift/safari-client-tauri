@@ -3,11 +3,16 @@ use std::path::PathBuf;
 
 use crate::models::AppState;
 
-fn state_path() -> Result<PathBuf, String> {
+/// Shared app data directory (`…/SafariClient`).
+pub fn safari_client_dir() -> Result<PathBuf, String> {
     let base = dirs::data_local_dir().ok_or_else(|| "impossibile trovare la cartella dati".to_string())?;
     let dir = base.join("SafariClient");
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    Ok(dir.join("state.json"))
+    Ok(dir)
+}
+
+fn state_path() -> Result<PathBuf, String> {
+    Ok(safari_client_dir()?.join("state.json"))
 }
 
 pub fn save_state(state: &AppState) -> Result<(), String> {

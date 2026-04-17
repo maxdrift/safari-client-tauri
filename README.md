@@ -7,6 +7,8 @@ Functional requirements: [docs/PRD.md](docs/PRD.md).
 ## Where data is stored
 
 - **Application state** (slide order, categories, `subject_id`, `transform_id`, file paths): JSON in the OS user data directory under `SafariClient/state.json` (e.g. on macOS: `~/Library/Application Support/SafariClient/state.json`; see `dirs::data_local_dir()` in `src-tauri/src/commands/persistence.rs`).
+- **Preferences** (e.g. default competitor name for the export filename): `SafariClient/preferences.json` (`load_preferences_cmd` / `save_preferences_cmd` in Rust).
+- **Custom species catalog** (optional): if the user imports an elenco via **Impostazioni**, the app stores it as `SafariClient/elenco_pesci_custom.csv`; otherwise the bundled embedded CSV is used (`import_species_catalog_cmd` / `restore_default_species_catalog_cmd`). This is separate from **Import CSV** in the navbar, which merges slide metadata.
 - **Thumbnails / previews** (cached resized copies at 350 / 512 / 1024 px width): system temp directory + `safari-client-previews` (see `src-tauri/src/imaging/thumbnails.rs`). This is derived cache only, not the original photos.
 
 **Loading behavior:** New files are registered quickly using image dimensions only. The **grid** renders each tile with `convertFileSrc(slide.path)` (the same original file as the lightbox), not the temp-folder preview files, so thumbnails stay reliable in the WebView. Resized previews (350 / 512 / 1024) are still written in the **background** for other uses (see `drainThumbnailQueue` and `regenerate_thumbnails_cmd`). After slide updates, **`slidesRenderEpoch.n`** is bumped so `$derived` in the page stays in sync with `app.svelte.ts`.

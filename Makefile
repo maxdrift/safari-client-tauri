@@ -121,11 +121,12 @@ fmt-check:
 rustdoc:
 	cd $(TAURI_DIR) && $(CARGO) doc --open --no-deps
 
+# Same --config merge as .github/workflows/ci.yml: skip signed updater bundles unless TAURI_SIGNING_PRIVATE_KEY is set (see Tauri updater docs).
 tauri-build:
-	$(NPM) run tauri build
+	$(NPM) run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
 tauri-build-debug:
-	$(NPM) run tauri build -- --debug
+	$(NPM) run tauri build -- --debug --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
 clean:
 	rm -rf build .svelte-kit
