@@ -73,26 +73,38 @@ jobs:
           includeUpdaterJson: true
           args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
 
-  # Updater endpoint in tauri.conf uses latest-legacy.json; tauri-action uploads latest.json.
+  # tauri-action uploads latest.json on the legacy tag release. Legacy apps resolve
+  # .../releases/latest/download/latest-legacy.json, so we mirror the same manifest onto
+  # the current published non-legacy "latest" release (see release.yml for the other direction).
   upstream-alias:
-    name: Upload latest-legacy.json for updater
+    name: Upload latest-legacy.json to latest release
     if: ${{ endsWith(github.ref_name, '-legacy') }}
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Duplicate latest.json as latest-legacy.json on release
+      - name: Attach latest-legacy.json to releases/latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          LEGACY_TAG="${{ github.ref_name }}"
           mkdir -p /tmp/gh-assets
-          if ! gh release download "$TAG" --pattern 'latest.json' -D /tmp/gh-assets 2>/dev/null; then
-            echo "No latest.json on release $TAG (skip alias)."
+          if ! gh release download "$LEGACY_TAG" --repo "$REPO" --pattern 'latest.json' -D /tmp/gh-assets 2>/dev/null; then
+            echo "No latest.json on release $LEGACY_TAG (skip)."
             exit 0
           fi
-          if [[ -f /tmp/gh-assets/latest.json ]]; then
-            cp /tmp/gh-assets/latest.json latest-legacy.json
-            gh release upload "$TAG" latest-legacy.json --clobber
-            echo "Uploaded latest-legacy.json for updater endpoint."
+          if [[ ! -f /tmp/gh-assets/latest.json ]]; then
+            exit 0
           fi
+          cp /tmp/gh-assets/latest.json latest-legacy.json
+          if ! LATEST_TAG=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null); then
+            echo "No published latest release; cannot attach latest-legacy.json."
+            exit 0
+          fi
+          if [[ "$LATEST_TAG" == *-legacy ]]; then
+            echo "Latest release tag ends with -legacy; refusing to upload (unexpected)."
+            exit 0
+          fi
+          gh release upload "$LATEST_TAG" latest-legacy.json --repo "$REPO" --clobber
+          echo "Uploaded latest-legacy.json to latest release $LATEST_TAG (from legacy $LEGACY_TAG)."
